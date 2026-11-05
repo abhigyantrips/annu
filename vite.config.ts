@@ -1,8 +1,11 @@
 import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath, URL } from "node:url";
 import react from "@vitejs/plugin-react";
 export default defineConfig({
   root: "src/dashboard",
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: { alias: { "@": fileURLToPath(new URL("./src/dashboard", import.meta.url)) } },
   build: { outDir: "../../dist/public", emptyOutDir: true },
   server: {
     host: "127.0.0.1",

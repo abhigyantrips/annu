@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import { eventSchema, type Geo } from "./events.js";
 import { DatabaseWorker } from "./workers.js";
+import { parseDashboardPath } from "../shared/dashboard-routes.js";
 import type { Row } from "../shared/types.js";
 
 export type AppOptions = {
@@ -396,11 +397,13 @@ export async function buildApp(options: AppOptions) {
     app.get("/stroke.js", async (_request, reply) =>
       reply.sendFile("script.js"),
     );
-    app.setNotFoundHandler((request, reply) =>
-      request.url.startsWith("/api/")
-        ? reply.code(404).send({ error: "Not found" })
-        : reply.code(404).send("Not found"),
-    );
+    app.setNotFoundHandler((request, reply) => {
+      const pathname = request.url.split("?")[0];
+      if ((request.method === "GET" || request.method === "HEAD") && pathname !== "/" && parseDashboardPath(pathname).valid) {
+        return reply.sendFile("index.html", { maxAge: 0 });
+      }
+      return reply.code(404).send(pathname.startsWith("/api/") ? { error: "Not found" } : "Not found");
+    });
   }
   const prune = setInterval(
     () =>
