@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tracker browser fixture</title>
+  </head>
+  <body>
+    <h1>Tracker browser fixture</h1>
+    <p>
+      This is a local QA page. Pass ?site=SITE_UUID from a site allowing
+      localhost:3100.
+    </p>
+    <a id="plain" href="https://example.org/plain?private=1#fragment"
+      >Unmarked outgoing link</a
+    >
+    <a
+      id="marked"
+      href="https://example.org/read?private=1#fragment"
+      data-annu-link
+      >Opted-in outgoing link</a
+    >
+    <a id="download" href="/essay.pdf" download data-annu-link>Download</a>
+    <a id="mail" href="mailto:hello@example.org?subject=Hi" data-annu-link
+      >Email</a
+    >
+    <script>
+      window.fixturePackets = [];
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = (url, options) => {
+        if (String(url).includes("/api/collect"))
+          window.fixturePackets.push(JSON.parse(options.body));
+        return originalFetch(url, options);
+      };
+      window.fixtureBeacons = [];
+      const originalBeacon = navigator.sendBeacon.bind(navigator);
+      navigator.sendBeacon = (url, blob) => {
+        blob
+          .text()
+          .then((text) => window.fixtureBeacons.push(JSON.parse(text)));
+        return originalBeacon(url, blob);
+      };
+      window.addEventListener("load", () => {
+        const script = document.createElement("script");
+        script.src = "http://localhost:3000/script.js";
+        script.dataset.siteId = new URLSearchParams(location.search).get(
+          "site",
+        );
+        script.dataset.heartbeat = "true";
+        document.head.appendChild(script);
+      });
+      // Prevent fixture navigation only after the tracker observes the click at document level.
+      // The tracker itself must never preventDefault or rewrite an href.
+      window.addEventListener("click", (event) => {
+        if (event.target.closest("a")) event.preventDefault();
+      });
+    </script>
+  </body>
+</html>

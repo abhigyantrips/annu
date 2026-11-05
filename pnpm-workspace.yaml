@@ -1,0 +1,19 @@
+packages:
+  - .
+
+# Keep the virtual store inside node_modules so Docker can copy it intact.
+nodeLinker: isolated
+enableGlobalVirtualStore: false
+
+overrides:
+  '@esbuild-kit/core-utils>esbuild': ^0.25.12
+
+# Required native bindings and platform binary setup; no blanket script approval.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  fsevents: false
+
+# Preserve the already-locked patched static package during the migration.
+minimumReleaseAgeExclude:
+  - '@fastify/static@10.1.10'
