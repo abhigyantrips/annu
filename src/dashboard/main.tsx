@@ -160,17 +160,9 @@ const titles: Record<Page, [string, string]> = {
   ],
 };
 
+const logoUrl = new URL("./assets/annu-logo.svg", import.meta.url).href;
 function Brand() {
-  return (
-    <div className="brand">
-      <span className="brand-mark">
-        <Leaf size={24} strokeWidth={1.7} />
-      </span>
-      <span>
-        annu<span className="brand-dot">.</span>
-      </span>
-    </div>
-  );
+  return <div className="brand"><img className="brand-logo" src={logoUrl} alt="annu." width={110} height={40} /></div>;
 }
 function SelectField({ value, onValueChange, options, label, disabled, className }: {
   value: string; onValueChange: (value: string) => void; options: { value: string; label: string }[];

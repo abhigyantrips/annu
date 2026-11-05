@@ -186,3 +186,7 @@ Umami is the behavioral reference, not a runtime dependency. The tracker at [clo
 Ingestion uses Drizzle with prepared, parameterized SQLite operations and indexed lookups. It performs no geolocation network calls, migrations, or dashboard aggregations on the request path. WAL readers run separately from the single writer; reporting can still compete for CPU and storage, so this is not a claim of unlimited throughput. Retention is bounded, writes are durable, and overload is allowed to lose events. No ingestion performance guarantee is claimed without testing on the target Raspberry Pi and storage.
 
 `pnpm run bench` starts a temporary server/database, sends 1,000 pageviews at concurrency 10 while fetching reports, then removes its temporary data. It reports HTTP latency percentiles, errors, throughput, and process RSS. Override BENCH_EVENTS and BENCH_CONCURRENCY to test your hardware. The benchmark does not modify the application database. To manually verify the tracker in a real browser, run `node scripts/serve-fixture.mjs` and open `http://localhost:3100/?site=SITE_UUID` using a site that allows `localhost:3100`; the fixture records outgoing packets and prevents test-link navigation after the tracker observes each click.
+
+## Credits
+
+The “annu.” logo uses [Architects Daughter](https://fonts.google.com/specimen/Architects+Daughter) by Kimberly Geswein, converted to SVG outlines. The font is licensed under the [SIL Open Font License 1.1](https://github.com/google/fonts/blob/main/ofl/architectsdaughter/OFL.txt).
