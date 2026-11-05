@@ -16,7 +16,6 @@ import {
   FileText,
   Globe2,
   LayoutDashboard,
-  Leaf,
   Link2,
   Loader2,
   LogOut,
@@ -121,43 +120,16 @@ const navigation = [
   { id: "performance", name: "Performance", icon: ActivityIcon },
   { id: "locations", name: "Locations", icon: Globe2 },
 ] as const;
-const titles: Record<Page, [string, string]> = {
-  overview: [
-    "A little perspective.",
-    "The people, places, and connections around your writing.",
-  ],
-  pages: [
-    "Words that find readers.",
-    "Understand which pages people visit, and where they spend their time.",
-  ],
-  referrers: [
-    "How people find you.",
-    "A small map of the websites sending readers your way.",
-  ],
-  outgoing: [
-    "Where curiosity leads.",
-    "The links your readers follow from your corner of the web.",
-  ],
-  utm: [
-    "Give your sources a name.",
-    "Understand the communities and conversations behind each visit.",
-  ],
-  visitors: [
-    "Every visit has a story.",
-    "Anonymous browser identities, with a history across visits.",
-  ],
-  performance: [
-    "Make room for reading.",
-    "Real-world page performance, measured in your readers’ browsers.",
-  ],
-  locations: [
-    "A world of readers.",
-    "Approximate locations supplied by your Cloudflare connection.",
-  ],
-  settings: [
-    "Make yourself at home.",
-    "Your websites, tracking preferences, and a little configuration.",
-  ],
+const titles: Record<Page, string> = {
+  overview: "Overview",
+  pages: "Pages",
+  referrers: "Referrers",
+  outgoing: "Outgoing links",
+  utm: "UTM tags",
+  visitors: "Visitors",
+  performance: "Performance",
+  locations: "Locations",
+  settings: "Settings",
 };
 
 const logoUrl = new URL("./assets/annu-logo.svg", import.meta.url).href;
@@ -194,7 +166,7 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 function Empty({
-  title = "A quiet corner, for now.",
+  title = "No data yet",
   text = "Data will appear here as people visit your website.",
 }: {
   title?: string;
@@ -202,9 +174,6 @@ function Empty({
 }) {
   return (
     <div className="empty">
-      <span className="empty-icon">
-        <Leaf size={25} strokeWidth={1.4} />
-      </span>
       <h3>{title}</h3>
       <p>{text}</p>
     </div>
@@ -423,9 +392,9 @@ function Chart({
     <Card className="panel chart-panel">
       <div className="panel-heading">
         <div>
-          <h2>Readers over time</h2>
+          <h2>Traffic Over Time</h2>
           <span className="subtle">
-            A daily view of your corner of the web{" "}
+            Daily visitors and page views{" "}
             <span className="utc">· UTC</span>
           </span>
         </div>
@@ -585,13 +554,13 @@ function Stats({ report }: { report: Report }) {
           title: "Pageviews",
           value: fmt(t.views),
           icon: FileText,
-          note: "Every page, every return",
+          note: "Total page views",
         },
         {
-          title: "Time per visit",
+          title: "Time per Visit",
           value: duration(t.duration),
           icon: Clock3,
-          note: "Visible reading time, best effort",
+          note: "Estimated active time",
         },
       ].map(({ title, value, icon: Icon, note }) => (
         <Card className="stat" key={title}>
@@ -742,7 +711,7 @@ function LabelSettings({
     void load();
   }, [load]);
   return (
-    <Modal title="A name for every connection" onClose={onClose}>
+    <Modal title="UTM labels" onClose={onClose}>
       <p className="muted">
         Combine several raw UTM values under one readable label. Each dimension
         has its own labels.
@@ -903,7 +872,7 @@ function VisitorHistory({
     void load();
   }, [load]);
   return (
-    <Modal title="A reader’s visits" onClose={onClose} wide>
+    <Modal title="Visitor activity" onClose={onClose} wide>
       <p className="visitor-id mono">{visitor}</p>
       <p className="muted">
         History across all retained dates · {data?.totalVisits ?? "…"} visits.
@@ -1023,7 +992,7 @@ function SiteSettings({
       <Card className="panel setting-panel">
         <div className="panel-heading">
           <div>
-            <h2>{newSite ? "Your first website" : "Website details"}</h2>
+            <h2>{newSite ? "Your First Website" : "Website Details"}</h2>
             <span className="subtle">
               Only your configured hostnames can send data.
             </span>
@@ -1058,7 +1027,7 @@ function SiteSettings({
               onChange={(e) => setName(e.target.value)}
               required
               maxLength={100}
-              placeholder="My corner of the web"
+              placeholder="My website"
             />
           </label>
           <label>
@@ -1111,16 +1080,15 @@ function SiteSettings({
           <Card className="panel setting-panel">
             <div className="panel-heading">
               <div>
-                <h2>Thoughtful by default</h2>
+                <h2>Privacy</h2>
                 <span className="subtle">
                   No IP storage. No fingerprinting. No retry queue.
                 </span>
               </div>
-              <Leaf size={19} />
             </div>
             <div className="privacy-copy">
               <p>
-                A random UUID stays in each reader’s browser. Clearing browser
+                A random UUID stays in each visitor’s browser. Clearing browser
                 storage creates a new identity.
               </p>
               <p>
@@ -1129,7 +1097,7 @@ function SiteSettings({
               </p>
               <h3>Exclude your own visits</h3>
               <p>
-                Run this on your <strong>blog’s origin</strong> in the browser
+                Run this on your <strong>website’s origin</strong> in the browser
                 console:
               </p>
               <div className="copy-field">
@@ -1137,7 +1105,7 @@ function SiteSettings({
                 <CopyButton value="localStorage.setItem('annu.disabled', 'true')" />
               </div>
               <p className="subtle">
-                Reload the blog afterwards. Remove the key to track this browser
+                Reload the website afterwards. Remove the key to track this browser
                 again.
               </p>
             </div>
@@ -1145,7 +1113,7 @@ function SiteSettings({
           <Card className="panel setting-panel embed-panel">
             <div className="panel-heading">
               <div>
-                <h2>A small script. A little understanding.</h2>
+                <h2>Tracking Script</h2>
                 <span className="subtle">
                   This loader starts after page load. Requests are best effort.
                 </span>
@@ -1212,17 +1180,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
     <div className="login-page">
       <div className="login-card">
         <Brand />
-        <span className="eyebrow">YOUR CORNER OF THE WEB</span>
-        <h1>
-          A little understanding
-          <br />
-          goes a long way.
-        </h1>
-        <p className="muted">
-          Thoughtful analytics for the independent web.
-          <br />
-          Sign in to see who your words are reaching.
-        </p>
+        <h1>Sign in</h1>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -1255,14 +1213,10 @@ function Login({ onLogin }: { onLogin: () => void }) {
             </p>
           )}
           <Button type="submit" variant="default" disabled={busy}>
-            {busy ? <Loader2 size={16} className="spin" /> : null}Step inside
+            {busy ? <Loader2 size={16} className="spin" /> : null}Sign in
             <ArrowUpRight size={16} />
           </Button>
         </form>
-        <div className="login-foot">
-          <Leaf size={14} />
-          Self-hosted. Quietly yours.
-        </div>
       </div>
     </div>
   );
@@ -1289,7 +1243,6 @@ function DashboardSidebar({ site, sites, siteId, setSiteId, page, setPage, onLog
     <SidebarFooter><SidebarMenu>
       <SidebarMenuItem><SidebarMenuButton tooltip="All websites" aria-label="All websites" onClick={onHome}><Globe2 /><span>All websites</span></SidebarMenuButton></SidebarMenuItem>
       <SidebarMenuItem><SidebarMenuButton tooltip="Settings" aria-label="Settings" isActive={page === "settings"} onClick={() => navigate("settings")}><Settings2 /><span>Settings</span></SidebarMenuButton></SidebarMenuItem>
-      <SidebarMenuItem><div className="sidebar-note"><span className="leaf-circle"><Leaf size={16} /></span><p>For a more<br /><strong>connected web.</strong></p></div></SidebarMenuItem>
       <SidebarMenuItem><SidebarMenuButton tooltip="Sign out" aria-label="Sign out" onClick={onLogout}><LogOut /><span>Sign out</span></SidebarMenuButton></SidebarMenuItem>
     </SidebarMenu></SidebarFooter>
   </Sidebar>;
@@ -1449,7 +1402,7 @@ function App() {
         catch (e) { setError((e as Error).message); }
       }}><LogOut size={14} />Sign out</Button></header>
       <main className="site-picker-main">
-        <div className="page-heading"><div><span className="eyebrow">YOUR CORNER OF THE WEB</span><h1>Choose your website.</h1><p>Select a website to see its analytics, or add a new corner of the web.</p></div>
+        <div className="page-heading"><div><h1>Websites</h1></div>
           {sitesLoaded && <Button onClick={() => setAddingSite(true)}><Plus size={15} />Add website</Button>}
         </div>
         {error && <div className="error-banner" role="alert">{error}<Button variant="link" onClick={() => void loadSites().catch((e) => setError(e.message))}>Try again</Button></div>}
@@ -1462,9 +1415,9 @@ function App() {
               event.preventDefault(); navigate(website.id);
             }}><span className="leaf-circle"><Globe2 size={19} /></span><div><h2>{website.name}</h2><p>{website.domains.join(", ")}</p></div><ChevronRight size={18} /></a>
           </Card>)}</div>
-        ) : <Card className="panel"><Empty title="Your first corner of the web." text="You haven’t added any websites yet. Add one to start gathering a little perspective." /><div className="site-picker-empty-action"><Button variant="default" onClick={() => setAddingSite(true)}><Plus size={15} />Add your first website</Button></div></Card>}
+        ) : <Card className="panel"><Empty title="No websites yet" text="Add a website to start collecting analytics." /><div className="site-picker-empty-action"><Button variant="default" onClick={() => setAddingSite(true)}><Plus size={15} />Add your first website</Button></div></Card>}
       </main>
-      {addingSite && <Modal title="Another corner of the web" onClose={() => setAddingSite(false)}><SiteSettings onSaved={saved} newSite /></Modal>}
+      {addingSite && <Modal title="Add website" onClose={() => setAddingSite(false)}><SiteSettings onSaved={saved} newSite /></Modal>}
     </div>
   );
   const pathColumns: Column[] = [
@@ -1505,8 +1458,8 @@ function App() {
             <span className="live-badge">
               <span />
               {report
-                ? `${fmt(report.totals.live)} here now`
-                : "Listening quietly"}
+                ? `${fmt(report.totals.live)} online`
+                : "Connecting…"}
             </span>
             <div className="avatar" title="Administrator">
               A
@@ -1516,11 +1469,7 @@ function App() {
         <main>
           <div className="page-heading">
             <div>
-              <span className="eyebrow">
-                {page === "overview" ? "THE BIG PICTURE" : "A CLOSER LOOK"}
-              </span>
-              <h1>{titles[page][0]}</h1>
-              <p>{titles[page][1]}</p>
+              <h1>{titles[page]}</h1>
             </div>
             <div className="page-actions">
               {page === "settings" ? (
@@ -1584,8 +1533,8 @@ function App() {
                   <Chart report={report} from={from} to={to} />
                   <div className="two-columns">
                     <Ranking
-                      title="The paths they take"
-                      subtitle="Your most-read pages"
+                      title="Top Pages"
+                      subtitle="Pages with the most views"
                       rows={report.paths.map((p) => ({
                         name: p.path,
                         value: p.views,
@@ -1594,8 +1543,8 @@ function App() {
                       onMore={() => setPage("pages")}
                     />
                     <Ranking
-                      title="Connections that count"
-                      subtitle="Where your readers come from"
+                      title="Top Referrers"
+                      subtitle="Websites sending visitors to your site"
                       rows={report.referrers.map((r) => ({
                         name: r.name,
                         value: r.visits,
@@ -1604,29 +1553,13 @@ function App() {
                       onMore={() => setPage("referrers")}
                     />
                   </div>
-                  <div className="connection-note">
-                    <span className="leaf-circle">
-                      <Leaf size={18} />
-                    </span>
-                    <p>
-                      Behind every number, a little curiosity.
-                      <span>
-                        Your words found {fmt(report.totals.visitors)} browser{" "}
-                        {report.totals.visitors === 1
-                          ? "identity"
-                          : "identities"}{" "}
-                        in this period.
-                      </span>
-                    </p>
-                    <span className="note-line" />
-                  </div>
                 </>
               )}
               {page === "pages" && (
                 <Card className="panel">
                   <div className="panel-heading">
                     <div>
-                      <h2>Page breakdown</h2>
+                      <h2>Page Breakdown</h2>
                       <span className="subtle">
                         Reading time on a path ÷ distinct visits to that path.
                       </span>
@@ -1640,7 +1573,7 @@ function App() {
                 <Card className="panel">
                   <div className="panel-heading">
                     <div>
-                      <h2>Incoming connections</h2>
+                      <h2>Referrers</h2>
                       <span className="subtle">
                         Origins only. Missing referrers stay direct / unknown.
                       </span>
@@ -1685,7 +1618,7 @@ function App() {
                 <Card className="panel">
                   <div className="panel-heading">
                     <div>
-                      <h2>Outgoing connections</h2>
+                      <h2>Outgoing Links</h2>
                       <span className="subtle">
                         Only explicitly opted-in links are measured.
                       </span>
@@ -1728,7 +1661,7 @@ function App() {
                 <Card className="panel">
                   <div className="panel-heading">
                     <div>
-                      <h2>A history of visits</h2>
+                      <h2>Visit History</h2>
                       <span className="subtle">
                         Open a browser identity to see its retained activity
                         across days.
@@ -1801,7 +1734,7 @@ function App() {
                 <Card className="panel">
                   <div className="panel-heading">
                     <div>
-                      <h2>Real-world performance</h2>
+                      <h2>Real-World Performance</h2>
                       <span className="subtle">
                         Standard Web Vitals belong to the initial document
                         route. Unsupported metrics stay absent.
@@ -1844,7 +1777,7 @@ function App() {
                 <Card className="panel">
                   <div className="panel-heading">
                     <div>
-                      <h2>Where words travel</h2>
+                      <h2>Visitor Locations</h2>
                       <span className="subtle">
                         Cloudflare headers only. No IP lookup or location
                         inference.
@@ -1890,16 +1823,13 @@ function App() {
                   <RefreshCw size={12} className={refreshing ? "spin" : ""} />
                 </Button>
               </span>
-              <span>
-                Made for the independent web <Leaf size={12} />
-              </span>
             </footer>
           )}
         </main>
       </div>
       {addingSite && (
         <Modal
-          title="Another corner of the web"
+          title="Add website"
           onClose={() => setAddingSite(false)}
         >
           <SiteSettings onSaved={saved} newSite />
@@ -1914,7 +1844,7 @@ function App() {
       )}
       {exporting && (
         <Modal
-          title="Take your data with you"
+          title="Export data"
           onClose={() => setExporting(false)}
         >
           <p className="muted">
