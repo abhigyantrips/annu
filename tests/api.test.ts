@@ -209,3 +209,24 @@ test("Cloudflare country, region and encoded city are used only when explicitly 
     visits: 1,
   });
 });
+
+test("login rate limits password attempts to five per minute", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "annu-login-rate-"));
+  const app = await buildApp({
+    databasePath: join(dir, "test.db"),
+    adminPassword: "test-password-only",
+    sessionSecret: "test-only-session-secret-with-32-characters",
+    serveStatic: false,
+  });
+  t.after(async () => {
+    await app.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const response = await app.inject({ method: "POST", url: "/api/login", payload: { password: "wrong" } });
+    assert.equal(response.statusCode, 401);
+  }
+  const limited = await app.inject({ method: "POST", url: "/api/login", payload: { password: "wrong" } });
+  assert.equal(limited.statusCode, 429);
+  assert.ok(limited.headers["retry-after"]);
+});

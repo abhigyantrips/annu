@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { MapingIcon } from "@hugeicons/core-free-icons";
 import {
   Activity as ActivityIcon,
   ArrowDownLeft,
@@ -22,7 +24,7 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Settings2,
+  Settings,
   SlidersHorizontal,
   Tag,
   Trash2,
@@ -49,7 +51,7 @@ import { cn } from "@/lib/utils";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Sidebar, SidebarProvider, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarProvider, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 import { parseDashboardPath, dashboardPath, type Page } from "../shared/dashboard-routes";
 import "./style.css";
 
@@ -94,6 +96,9 @@ const siteName = (url: string) => {
     return url;
   }
 };
+class ApiError extends Error {
+  constructor(message: string, readonly status: number) { super(message); }
+}
 async function api<T>(url: string, body?: object, method = "POST"): Promise<T> {
   const response = await fetch(url, {
     method: body !== undefined || method === "DELETE" ? method : "GET",
@@ -106,26 +111,29 @@ async function api<T>(url: string, body?: object, method = "POST"): Promise<T> {
     window.dispatchEvent(new Event("annu:unauthorized"));
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || "Request failed. Please try again.");
+    throw new ApiError(error.error || "Request failed. Please try again.", response.status);
   }
   return response.status === 204 ? (undefined as T) : response.json();
+}
+function LocationsIcon() {
+  return <HugeiconsIcon icon={MapingIcon} size={18} strokeWidth={2} />;
 }
 const navigation = [
   { id: "overview", name: "Overview", icon: LayoutDashboard },
   { id: "pages", name: "Pages", icon: FileText },
   { id: "referrers", name: "Referrers", icon: ArrowDownLeft },
-  { id: "outgoing", name: "Outgoing links", icon: ArrowUpRight },
-  { id: "utm", name: "UTM tags", icon: Tag },
+  { id: "outgoing", name: "Outgoing Links", icon: ArrowUpRight },
+  { id: "utm", name: "UTM Tags", icon: Tag },
   { id: "visitors", name: "Visitors", icon: Users },
   { id: "performance", name: "Performance", icon: ActivityIcon },
-  { id: "locations", name: "Locations", icon: Globe2 },
+  { id: "locations", name: "Locations", icon: LocationsIcon },
 ] as const;
 const titles: Record<Page, string> = {
   overview: "Overview",
   pages: "Pages",
   referrers: "Referrers",
-  outgoing: "Outgoing links",
-  utm: "UTM tags",
+  outgoing: "Outgoing Links",
+  utm: "UTM Tags",
   visitors: "Visitors",
   performance: "Performance",
   locations: "Locations",
@@ -136,13 +144,23 @@ const logoUrl = new URL("./assets/annu-logo.svg", import.meta.url).href;
 function Brand() {
   return <div className="brand"><img className="brand-logo" src={logoUrl} alt="annu." width={110} height={40} /></div>;
 }
+function SiteFavicon({ domain, name }: { domain?: string; name: string }) {
+  const [failed, setFailed] = useState(false);
+  let hostname = "";
+  try {
+    if (domain) hostname = new URL(domain.includes("://") ? domain : `https://${domain}`).hostname;
+  } catch { /* Missing or invalid hostnames use the site's initial. */ }
+  return <span className="site-favicon" aria-hidden="true">
+    {hostname && !failed ? <img src={`https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostname)}.ico`} width={16} height={16} alt="" referrerPolicy="no-referrer" onError={() => setFailed(true)} /> : name[0]?.toUpperCase() || "+"}
+  </span>;
+}
 function SelectField({ value, onValueChange, options, label, disabled, className }: {
-  value: string; onValueChange: (value: string) => void; options: { value: string; label: string }[];
+  value: string; onValueChange: (value: string) => void; options: { value: string; label: string; icon?: React.ReactNode }[];
   label: string; disabled?: boolean; className?: string;
 }) {
   return <Select items={options} value={value} onValueChange={(next) => { if (next !== null) onValueChange(next); }} disabled={disabled}>
-    <SelectTrigger aria-label={label} className={cn("w-full", className)}><SelectValue placeholder={label} data-initial={options.find((option) => option.value === value)?.label[0]?.toUpperCase() || "+"} /></SelectTrigger>
-    <SelectContent alignItemWithTrigger={false}><>{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</></SelectContent>
+    <SelectTrigger aria-label={label} className={cn("w-full", className)}>{options.find((option) => option.value === value)?.icon}<SelectValue placeholder={label} data-initial={options.find((option) => option.value === value)?.label[0]?.toUpperCase() || "+"} /></SelectTrigger>
+    <SelectContent alignItemWithTrigger={false} className={options.some((option) => option.icon) ? "site-picker-options" : undefined}><>{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.icon}{option.label}</SelectItem>)}</></SelectContent>
   </Select>;
 }
 function CopyButton({ value }: { value: string }) {
@@ -166,7 +184,7 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 function Empty({
-  title = "No data yet",
+  title = "No Data Yet",
   text = "Data will appear here as people visit your website.",
 }: {
   title?: string;
@@ -246,13 +264,13 @@ function DataTable({
           <label className="search">
             <Search size={15} />
             <Input
-              aria-label="Search table"
+              aria-label="Search Table"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
                 setPage(0);
               }}
-              placeholder="Find something…"
+              placeholder="Find Something…"
             />
           </label>
           <span className="muted small-text">
@@ -328,7 +346,7 @@ function DataTable({
               <div>
                 <Button
                   variant="ghost" size="icon-sm"
-                  aria-label="Previous page"
+                  aria-label="Previous Page"
                   disabled={!currentPage}
                   onClick={() => setPage(currentPage - 1)}
                 >
@@ -336,7 +354,7 @@ function DataTable({
                 </Button>
                 <Button
                   variant="ghost" size="icon-sm"
-                  aria-label="Next page"
+                  aria-label="Next Page"
                   disabled={(currentPage + 1) * 20 >= filtered.length}
                   onClick={() => setPage(currentPage + 1)}
                 >
@@ -527,7 +545,7 @@ function Ranking({
         </div>
       )}
       <Button variant="link" className="w-full border-t rounded-none" onClick={onMore}>
-        Explore {type === "referrer" ? "referrers" : "pages"}
+        Explore {type === "referrer" ? "Referrers" : "Pages"}
         <ArrowUpRight size={14} />
       </Button>
     </Card>
@@ -551,13 +569,13 @@ function Stats({ report }: { report: Report }) {
           note: "30-minute activity windows",
         },
         {
-          title: "Pageviews",
+          title: "Page Views",
           value: fmt(t.views),
           icon: FileText,
           note: "Total page views",
         },
         {
-          title: "Time per Visit",
+          title: "Average Visit Duration",
           value: duration(t.duration),
           icon: Clock3,
           note: "Estimated active time",
@@ -603,12 +621,12 @@ function Utm({
           <Tabs value={dimension} onValueChange={(value) => setDimension(value as Dimension)}><TabsList>{(["source", "medium", "campaign"] as const).map((d) => <TabsTrigger key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</TabsTrigger>)}</TabsList></Tabs>
           <Button onClick={() => setConfigure(true)}>
             <SlidersHorizontal size={15} />
-            Configure labels
+            Configure Labels
           </Button>
         </div>
         {!rows.length ? (
           <Empty
-            title={`No ${dimension} tags yet.`}
+            title={`No ${dimension[0].toUpperCase() + dimension.slice(1)} Tags Yet`}
             text={`Share a link with utm_${dimension} to see where visits come from.`}
           />
         ) : (
@@ -638,7 +656,7 @@ function Utm({
                 columns={[
                   {
                     key: "name",
-                    name: dimension,
+                    name: dimension[0].toUpperCase() + dimension.slice(1),
                     render: (r) => (
                       <div className="label-cell">
                         <span
@@ -711,7 +729,7 @@ function LabelSettings({
     void load();
   }, [load]);
   return (
-    <Modal title="UTM labels" onClose={onClose}>
+    <Modal title="UTM Labels" onClose={onClose}>
       <p className="muted">
         Combine several raw UTM values under one readable label. Each dimension
         has its own labels.
@@ -743,9 +761,9 @@ function LabelSettings({
           }
         }}
       >
-        <div className="grid gap-2"><span className="text-sm font-medium">Dimension</span><SelectField label="Dimension" value={dimension} disabled={!!editing} onValueChange={(value) => setDimension(value as Dimension)} options={["source", "medium", "campaign"].map((value) => ({ value, label: value }))} /></div>
+        <div className="grid gap-2"><span className="text-sm font-medium">Dimension</span><SelectField label="Dimension" value={dimension} disabled={!!editing} onValueChange={(value) => setDimension(value as Dimension)} options={["source", "medium", "campaign"].map((value) => ({ value, label: value[0].toUpperCase() + value.slice(1) }))} /></div>
         <label>
-          Display label
+          Display Label
           <Input
             required
             value={name}
@@ -755,7 +773,7 @@ function LabelSettings({
           />
         </label>
         <label>
-          Raw values{" "}
+          Raw Values{" "}
           <span className="subtle">one per line · exact, case-sensitive</span>
           <Textarea
             required
@@ -780,12 +798,12 @@ function LabelSettings({
                 setValues("");
               }}
             >
-              Cancel edit
+              Cancel Edit
             </Button>
           )}
           <Button type="submit" variant="default" disabled={busy}>
             {busy ? <Loader2 size={15} className="spin" /> : <Plus size={15} />}{" "}
-            {editing ? "Save label" : "Add label"}
+            {editing ? "Save Label" : "Add Label"}
           </Button>
         </div>
       </form>
@@ -872,7 +890,7 @@ function VisitorHistory({
     void load();
   }, [load]);
   return (
-    <Modal title="Visitor activity" onClose={onClose} wide>
+    <Modal title="Visitor Activity" onClose={onClose} wide>
       <p className="visitor-id mono">{visitor}</p>
       <p className="muted">
         History across all retained dates · {data?.totalVisits ?? "…"} visits.
@@ -886,7 +904,7 @@ function VisitorHistory({
       {!data && busy && (
         <p className="loading">
           <Loader2 size={18} className="spin" />
-          Loading history…
+          Loading History…
         </p>
       )}
       {data?.visits.map((v) => (
@@ -894,13 +912,13 @@ function VisitorHistory({
           <div className="visit-heading">
             <strong>{dateTime(Number(v.started_at))}</strong>
             <Badge variant="secondary">
-              {v.referrer ? siteName(String(v.referrer)) : "Direct / unknown"}
+              {v.referrer ? siteName(String(v.referrer)) : "Direct / Unknown"}
             </Badge>
           </div>
           <p className="subtle">
             {[v.country && countryName(String(v.country)), v.region, v.city]
               .filter(Boolean)
-              .join(" · ") || "Location unknown"}
+              .join(" · ") || "Location Unknown"}
             {v.campaign ? ` · Campaign: ${v.campaign}` : ""}
           </p>
           <div className="timeline">
@@ -955,10 +973,10 @@ function VisitorHistory({
           </div>
         </Card>
       ))}
-      {data && !data.visits.length && <Empty title="No retained visits." />}
+      {data && !data.visits.length && <Empty title="No Retained Visits" />}
       {data?.nextBefore && (
         <Button disabled={busy} onClick={() => void load(data.nextBefore!)}>
-          {busy ? <Loader2 size={14} className="spin" /> : null}Load older
+          {busy ? <Loader2 size={14} className="spin" /> : null}Load Older
           visits
         </Button>
       )}
@@ -1021,17 +1039,17 @@ function SiteSettings({
           }}
         >
           <label>
-            Website name
+            Website Name
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               maxLength={100}
-              placeholder="My website"
+              placeholder="My Website"
             />
           </label>
           <label>
-            Allowed hostnames
+            Allowed Hostnames
             <Input
               value={domains}
               onChange={(e) => setDomains(e.target.value)}
@@ -1070,7 +1088,7 @@ function SiteSettings({
               ) : (
                 <Check size={15} />
               )}{" "}
-              {site ? "Save changes" : "Add website"}
+              {site ? "Save Changes" : "Add Website"}
             </Button>
           </div>
         </form>
@@ -1095,7 +1113,7 @@ function SiteSettings({
                 Detailed history and statistics are kept for 400 days by
                 default. Retention is configured on your server.
               </p>
-              <h3>Exclude your own visits</h3>
+              <h3>Exclude Your Own Visits</h3>
               <p>
                 Run this on your <strong>website’s origin</strong> in the browser
                 console:
@@ -1123,7 +1141,7 @@ function SiteSettings({
             <div className="tracking-options">
               {[
                 {
-                  label: "25-second heartbeats",
+                  label: "25-Second Heartbeats",
                   value: heartbeat,
                   set: setHeartbeat,
                 },
@@ -1132,13 +1150,13 @@ function SiteSettings({
                   value: performance,
                   set: setPerformance,
                 },
-                { label: "All outgoing links", value: links, set: setLinks },
+                { label: "All Outgoing Links", value: links, set: setLinks },
                 {
-                  label: "Keep link query parameters",
+                  label: "Keep Link Query Parameters",
                   value: query,
                   set: setQuery,
                 },
-                { label: "Keep link fragments", value: hash, set: setHash },
+                { label: "Keep Link Fragments", value: hash, set: setHash },
               ].map((option) => (
                 <label className="checkbox" key={option.label}>
                   <Checkbox
@@ -1161,7 +1179,7 @@ function SiteSettings({
             </pre>
             <div className="panel-note">
               Outgoing links are opt-in: mark individual links with{" "}
-              <code>data-annu-link</code> or enable “All outgoing links” above
+              <code>data-annu-link</code> or enable “All Outgoing Links” above
               with <code>data-links="true"</code> on the tracker. Downloads and
               mailto links are included. Astro ClientRouter is supported.
             </div>
@@ -1180,7 +1198,6 @@ function Login({ onLogin }: { onLogin: () => void }) {
     <div className="login-page">
       <div className="login-card">
         <Brand />
-        <h1>Sign in</h1>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -1190,6 +1207,10 @@ function Login({ onLogin }: { onLogin: () => void }) {
               await api("/api/login", { password });
               onLogin();
             } catch (e) {
+              if (e instanceof ApiError && e.status === 401) {
+                window.location.assign("https://www.youtube.com/watch?v=cw9FIeHbdB8");
+                return;
+              }
               setError((e as Error).message);
             } finally {
               setBusy(false);
@@ -1197,7 +1218,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
           }}
         >
           <label>
-            Administrator password
+            Password
             <Input
               type="password"
               required
@@ -1213,7 +1234,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
             </p>
           )}
           <Button type="submit" variant="default" disabled={busy}>
-            {busy ? <Loader2 size={16} className="spin" /> : null}Sign in
+            {busy ? <Loader2 size={16} className="spin" /> : null}Continue
             <ArrowUpRight size={16} />
           </Button>
         </form>
@@ -1222,8 +1243,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
   );
 }
 
-function DashboardSidebar({ site, sites, siteId, setSiteId, page, setPage, onLogout, onHome }: {
-  site?: Site; sites: Site[]; siteId: string; setSiteId: (id: string) => void;
+function DashboardSidebar({ page, setPage, onLogout, onHome }: {
   page: Page; setPage: (page: Page) => void; onLogout: () => void; onHome: () => void;
 }) {
   const { setOpenMobile } = useSidebar();
@@ -1231,9 +1251,8 @@ function DashboardSidebar({ site, sites, siteId, setSiteId, page, setPage, onLog
   return <Sidebar collapsible="icon">
     <SidebarHeader>
       <div className="sidebar-brand"><Brand /></div>
-      <SelectField label="Current website" value={siteId} onValueChange={setSiteId} className="group-data-[collapsible=icon]:hidden" options={sites.length ? sites.map((site) => ({ value: site.id, label: site.name })) : [{ value: "", label: "Add a website" }]} />
     </SidebarHeader>
-    <SidebarContent><SidebarGroup><SidebarGroupLabel>Your analytics</SidebarGroupLabel>
+    <SidebarContent><SidebarGroup>
       <SidebarMenu>{navigation.map(({ id, name, icon: Icon }) => <SidebarMenuItem key={id}>
         <SidebarMenuButton tooltip={name} aria-label={name} aria-current={page === id ? "page" : undefined} isActive={page === id} onClick={() => navigate(id)}>
           <Icon /><span>{name}</span>
@@ -1241,9 +1260,9 @@ function DashboardSidebar({ site, sites, siteId, setSiteId, page, setPage, onLog
       </SidebarMenuItem>)}</SidebarMenu>
     </SidebarGroup></SidebarContent>
     <SidebarFooter><SidebarMenu>
-      <SidebarMenuItem><SidebarMenuButton tooltip="All websites" aria-label="All websites" onClick={onHome}><Globe2 /><span>All websites</span></SidebarMenuButton></SidebarMenuItem>
-      <SidebarMenuItem><SidebarMenuButton tooltip="Settings" aria-label="Settings" isActive={page === "settings"} onClick={() => navigate("settings")}><Settings2 /><span>Settings</span></SidebarMenuButton></SidebarMenuItem>
-      <SidebarMenuItem><SidebarMenuButton tooltip="Sign out" aria-label="Sign out" onClick={onLogout}><LogOut /><span>Sign out</span></SidebarMenuButton></SidebarMenuItem>
+      <SidebarMenuItem><SidebarMenuButton tooltip="All Websites" aria-label="All Websites" onClick={onHome}><Globe2 /><span>All Websites</span></SidebarMenuButton></SidebarMenuItem>
+      <SidebarMenuItem><SidebarMenuButton tooltip="Settings" aria-label="Settings" isActive={page === "settings"} onClick={() => navigate("settings")}><Settings /><span>Settings</span></SidebarMenuButton></SidebarMenuItem>
+      <SidebarMenuItem><SidebarMenuButton tooltip="Sign Out" aria-label="Sign Out" onClick={onLogout}><LogOut /><span>Sign Out</span></SidebarMenuButton></SidebarMenuItem>
     </SidebarMenu></SidebarFooter>
   </Sidebar>;
 }
@@ -1400,24 +1419,23 @@ function App() {
       <header className="site-picker-header"><Brand /><Button variant="ghost" onClick={async () => {
         try { await api("/api/logout", {}); setAuthenticated(false); setSitesLoaded(false); }
         catch (e) { setError((e as Error).message); }
-      }}><LogOut size={14} />Sign out</Button></header>
+      }}><LogOut size={14} />Sign Out</Button></header>
       <main className="site-picker-main">
         <div className="page-heading"><div><h1>Websites</h1></div>
-          {sitesLoaded && <Button onClick={() => setAddingSite(true)}><Plus size={15} />Add website</Button>}
+          {sitesLoaded && <Button onClick={() => setAddingSite(true)}><Plus size={15} />Add Website</Button>}
         </div>
-        {error && <div className="error-banner" role="alert">{error}<Button variant="link" onClick={() => void loadSites().catch((e) => setError(e.message))}>Try again</Button></div>}
+        {error && <div className="error-banner" role="alert">{error}<Button variant="link" onClick={() => void loadSites().catch((e) => setError(e.message))}>Try Again</Button></div>}
         {!route.valid && <p className="muted" role="status">This page could not be found. Choose a website below.</p>}
         {sitesLoaded && siteId && !site && <p className="muted" role="status">This website is unavailable. Choose another website below.</p>}
-        {!sitesLoaded ? <div className="loading"><Loader2 className="spin" size={20} />Loading your websites…</div> : sites.length ? (
-          <div className="site-picker-grid">{sites.map((website) => <Card className="site-picker-card" key={website.id}>
-            <a href={dashboardPath(website.id)} onClick={(event) => {
+        {!sitesLoaded ? <div className="loading"><Loader2 className="spin" size={20} />Loading Your Websites…</div> : sites.length ? (
+          <div className="site-picker-grid">{sites.map((website) => <Card className="site-picker-card" key={website.id} render={<a href={dashboardPath(website.id)} onClick={(event) => {
               if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
               event.preventDefault(); navigate(website.id);
-            }}><span className="leaf-circle"><Globe2 size={19} /></span><div><h2>{website.name}</h2><p>{website.domains.join(", ")}</p></div><ChevronRight size={18} /></a>
+            }} />}><SiteFavicon domain={website.domains[0]} name={website.name} /><div><h2>{website.name}</h2><p>{website.domains.join(", ")}</p></div><ChevronRight size={18} />
           </Card>)}</div>
-        ) : <Card className="panel"><Empty title="No websites yet" text="Add a website to start collecting analytics." /><div className="site-picker-empty-action"><Button variant="default" onClick={() => setAddingSite(true)}><Plus size={15} />Add your first website</Button></div></Card>}
+        ) : <Card className="panel"><Empty title="No Websites Yet" text="Add a website to start collecting analytics." /><div className="site-picker-empty-action"><Button variant="default" onClick={() => setAddingSite(true)}><Plus size={15} />Add Your First Website</Button></div></Card>}
       </main>
-      {addingSite && <Modal title="Add website" onClose={() => setAddingSite(false)}><SiteSettings onSaved={saved} newSite /></Modal>}
+      {addingSite && <Modal title="Add Website" onClose={() => setAddingSite(false)}><SiteSettings onSaved={saved} newSite /></Modal>}
     </div>
   );
   const pathColumns: Column[] = [
@@ -1431,39 +1449,31 @@ function App() {
     { key: "views", name: "Views", numeric: true },
     {
       key: "duration",
-      name: "Time per visit",
+      name: "Average Visit Duration",
       numeric: true,
       render: (r) => duration(r.duration),
     },
   ];
   return (
-    <SidebarProvider style={{ "--sidebar-width": "222px", "--sidebar-width-icon": "56px" } as React.CSSProperties} className="app-shell" defaultOpen={!document.cookie.includes("sidebar_state=false")}>
-      <DashboardSidebar site={site} sites={sites} siteId={siteId} setSiteId={setSiteId} page={page} setPage={setPage} onHome={() => navigate("")} onLogout={async () => {
+    <SidebarProvider style={{ "--sidebar-width": "222px", "--sidebar-width-icon": "56px" } as React.CSSProperties} className="app-shell" open>
+      <DashboardSidebar page={page} setPage={setPage} onHome={() => navigate("")} onLogout={async () => {
         try { await api("/api/logout", {}); setAuthenticated(false); }
         catch (e) { setError((e as Error).message); }
       }} />
       <div className="main-area">
         <header className="topbar">
-          <SidebarTrigger />
-          <div className="breadcrumb">
-            <span>{site?.domains[0] || "Your website"}</span>
-            <ChevronRight size={13} />
-            <strong>
-              {page === "settings"
-                ? "Settings"
-                : navigation.find((n) => n.id === page)?.name}
-            </strong>
+          <div className="mobile-nav flex items-center gap-2 md:hidden">
+            <SidebarTrigger />
+            <Brand />
           </div>
           <div className="topbar-right">
             <span className="live-badge">
               <span />
               {report
-                ? `${fmt(report.totals.live)} online`
+                ? `${fmt(report.totals.live)} Online`
                 : "Connecting…"}
             </span>
-            <div className="avatar" title="Administrator">
-              A
-            </div>
+            <SelectField label="Current Website" value={siteId} onValueChange={setSiteId} className="topbar-site-picker" options={sites.map((site) => ({ value: site.id, label: site.name, icon: <SiteFavicon key={site.domains[0] || site.id} domain={site.domains[0]} name={site.name} /> }))} />
           </div>
         </header>
         <main>
@@ -1475,12 +1485,12 @@ function App() {
               {page === "settings" ? (
                 <Button onClick={() => setAddingSite(true)}>
                   <Plus size={15} />
-                  Add website
+                  Add Website
                 </Button>
               ) : (
                 <>
                   <div className="w-40">
-                    <SelectField label="Date range" value={days} onValueChange={setDays} options={[{"value": "1", "label": "Today"}, {"value": "7", "label": "Last 7 days"}, {"value": "30", "label": "Last 30 days"}, {"value": "90", "label": "Last 90 days"}, {"value": "365", "label": "Last 12 months"}, {"value": "custom", "label": "Custom range"}]} />
+                    <SelectField label="Date Range" value={days} onValueChange={setDays} options={[{"value": "1", "label": "Today"}, {"value": "7", "label": "Last 7 Days"}, {"value": "30", "label": "Last 30 Days"}, {"value": "90", "label": "Last 90 Days"}, {"value": "365", "label": "Last 12 Months"}, {"value": "custom", "label": "Custom Range"}]} />
                   </div>
                   <Button disabled={!site} onClick={() => setExporting(true)}>
                     <Download size={15} />
@@ -1514,7 +1524,7 @@ function App() {
             <div className="error-banner" role="alert">
               {error}
               <Button variant="link" onClick={() => void refresh()}>
-                Try again
+                Try Again
               </Button>
             </div>
           )}
@@ -1585,7 +1595,7 @@ function App() {
                     columns={[
                       {
                         key: "name",
-                        name: "Referring website",
+                        name: "Referring Website",
                         render: (r) => (
                           <span className="referrer-cell">
                             <span className="domain-icon">
@@ -1606,7 +1616,7 @@ function App() {
                       { key: "visits", name: "Visits", numeric: true },
                       {
                         key: "duration",
-                        name: "Time per visit",
+                        name: "Time per Visit",
                         numeric: true,
                         render: (r) => duration(r.duration),
                       },
@@ -1641,7 +1651,7 @@ function App() {
                       },
                       {
                         key: "path",
-                        name: "From page",
+                        name: "From Page",
                         render: (r) => <span className="mono">{r.path}</span>,
                       },
                       { key: "clicks", name: "Clicks", numeric: true },
@@ -1674,7 +1684,7 @@ function App() {
                     columns={[
                       {
                         key: "visitorId",
-                        name: "Browser identity",
+                        name: "Browser Identity",
                         render: (r) => (
                           <Button
                             variant="link" className="font-mono"
@@ -1696,14 +1706,14 @@ function App() {
                       },
                       {
                         key: "lastSeen",
-                        name: "Last seen",
+                        name: "Last Seen",
                         render: (r) => dateTime(r.lastSeen),
                       },
                       { key: "visits", name: "Visits", numeric: true },
                       { key: "views", name: "Views", numeric: true },
                       {
                         key: "duration",
-                        name: "Reading time",
+                        name: "Reading Time",
                         numeric: true,
                         render: (r) => duration(r.duration),
                       },
@@ -1724,7 +1734,7 @@ function App() {
                           }
                         }}
                       >
-                        Load older visitors
+                        Load Older Visitors
                       </Button>
                     </div>
                   )}
@@ -1793,7 +1803,7 @@ function App() {
                         name: "Country",
                         render: (r) => countryName(r.country),
                       },
-                      { key: "region", name: "Province / region" },
+                      { key: "region", name: "Province / Region" },
                       { key: "city", name: "City" },
                       { key: "visitors", name: "Visitors", numeric: true },
                       { key: "visits", name: "Visits", numeric: true },
@@ -1804,32 +1814,34 @@ function App() {
             </>
           )}
           {sites.length > 0 && page !== "settings" && (
-            <footer>
-              <span>
+            <footer className="status-footer">
+              <div className="status-pill rounded-lg">
+                <span className="status-pill-label">
                 <span className={`status-dot ${error ? "offline" : ""}`} />
                 {error
-                  ? "Connection interrupted"
+                  ? "Connection Interrupted"
                   : refreshing
                     ? "Refreshing…"
                     : updated
-                      ? `Updated ${new Date(updated).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
-                      : "Waiting for data"}
+                      ? `Updated ${new Date(updated).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).toUpperCase()}`
+                      : "Waiting for Data"}
+                </span>
                 <Button
                   variant="ghost" size="icon-sm"
-                  aria-label="Refresh analytics"
+                  aria-label="Refresh Analytics"
                   onClick={() => void refresh()}
                   disabled={refreshing}
                 >
                   <RefreshCw size={12} className={refreshing ? "spin" : ""} />
                 </Button>
-              </span>
+              </div>
             </footer>
           )}
         </main>
       </div>
       {addingSite && (
         <Modal
-          title="Add website"
+          title="Add Website"
           onClose={() => setAddingSite(false)}
         >
           <SiteSettings onSaved={saved} newSite />
@@ -1844,14 +1856,14 @@ function App() {
       )}
       {exporting && (
         <Modal
-          title="Export data"
+          title="Export Data"
           onClose={() => setExporting(false)}
         >
           <p className="muted">
             Export raw records for the selected date range. Exports stream in
             small batches.
           </p>
-          <div className="grid gap-2"><span className="text-sm font-medium">Records</span><SelectField label="Records" value={exportKind} onValueChange={setExportKind} options={[{"value": "views", "label": "Pageviews and reading times"}, {"value": "visits", "label": "Visits, entry sources, and location"}, {"value": "clicks", "label": "Outgoing clicks"}, {"value": "vitals", "label": "Performance samples"}]} /></div>
+          <div className="grid gap-2"><span className="text-sm font-medium">Records</span><SelectField label="Records" value={exportKind} onValueChange={setExportKind} options={[{"value": "views", "label": "Pageviews and Reading Times"}, {"value": "visits", "label": "Visits, Entry Sources, and Location"}, {"value": "clicks", "label": "Outgoing Clicks"}, {"value": "vitals", "label": "Performance Samples"}]} /></div>
           <div className="grid gap-2"><span className="text-sm font-medium">Format</span><SelectField label="Format" value={exportFormat} onValueChange={setExportFormat} options={[{"value": "csv", "label": "CSV"}, {"value": "json", "label": "JSON"}]} /></div>
           <div className="form-actions">
             <Button variant="default" nativeButton={false} render={<a
@@ -1860,7 +1872,7 @@ function App() {
               onClick={() => setExporting(false)}
             >
               <Download size={15} />
-              Download export
+              Download Export
             </Button>
           </div>
         </Modal>

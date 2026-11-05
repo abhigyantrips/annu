@@ -123,7 +123,7 @@ export async function buildApp(options: AppOptions) {
     else if (!req.url.startsWith("/script.js"))
       reply.header(
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://icons.duckduckgo.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
       );
   });
   app.addHook("preHandler", async (request, reply) => {
