@@ -45,6 +45,9 @@ export const visits = sqliteTable(
     source: text("source"),
     medium: text("medium"),
     campaign: text("campaign"),
+    browser: text("browser"),
+    os: text("os"),
+    device: text("device"),
   },
   (t) => [
     index("visits_identity").on(t.siteId, t.visitorId, t.lastSeen),

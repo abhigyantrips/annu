@@ -307,3 +307,60 @@ test("site identities are isolated, exports are scoped, and retention never dele
   assert.equal(db.timeline(site.id, visitorId).views.length, 1);
   assert.equal(db.report(other.id, now - 1, now + 1, now).totals.views, 1);
 });
+
+test("hourly series respect UTC boundaries, range limits, and distinct visits", (t) => {
+  const { db, site, view } = fixture(t);
+  const start = Date.parse("2026-11-06T09:45:00Z");
+  view({}, start);
+  view({}, start + 20 * 60_000); // Same visit spans the hour boundary.
+  view({}, start + 70 * 60_000); // A new visit, in the second hourly bucket.
+  view({}, start + 75 * 60_000); // Outside the requested range.
+  const end = start + 75 * 60_000;
+  const hourly = db.report(site.id, start, end, end, "hour");
+  assert.deepEqual(hourly.series, [
+    { date: "2026-11-06T09:00:00Z", visitors: 1, visits: 1, views: 1 },
+    { date: "2026-11-06T10:00:00Z", visitors: 1, visits: 2, views: 2 },
+  ]);
+  assert.equal(hourly.totals.visits, 2); // Do not sum per-bucket unique counts.
+  assert.equal(hourly.totals.visitors, 1);
+  assert.deepEqual(db.report(site.id, start, end).series, [
+    { date: "2026-11-06", visitors: 1, visits: 2, views: 3 },
+  ]);
+});
+
+test("audience counts distinct visitors per dimension, scopes geography, and omits unknown buckets without changing totals", t => {
+  const {db, site, now, visitorId, geo, view}=fixture(t);
+  const ingest=(id:string, country:string, region:string, city:string, at:number)=>db.ingest({type:"view",siteId:site.id,visitorId:id,viewId:randomUUID(),url:"https://blog.test/post",title:"",referrer:"",utm:{}},"https://blog.test",{country,region,city},at,{browser:"Chrome",os:"Windows",device:"Desktop"});
+  ingest(visitorId,"US","CA","Springfield",now);
+  ingest(visitorId,"US","NY","Springfield",now+31*60_000);
+  ingest(randomUUID(),"CA","ON","Springfield",now+32*60_000);
+  // An old visit without environment fields is retained as Unknown.
+  view({visitorId:randomUUID()},now+33*60_000);
+  // Outside the requested range and on another website must not affect the breakdown.
+  ingest(randomUUID(),"DE","BE","Berlin",now-1);
+  const other=db.saveSite({name:"Other",domains:["other.test"]});
+  db.ingest({type:"view",siteId:other.id,visitorId:randomUUID(),viewId:randomUUID(),url:"https://other.test/",title:"",referrer:"",utm:{}},"https://other.test",geo,now,{browser:"Firefox",os:"Linux",device:"Desktop"});
+  const end=now+34*60_000;
+  const country=db.audience(site.id,now,end,"country");
+  assert.equal(country.visitors,3);
+  assert.equal(country.rows.find(r=>r.name==="US")?.visitors,1); // A country's two city groups share a visitor.
+  const browser=db.audience(site.id,now,end,"browser");
+  assert.deepEqual(browser.rows.map(r=>[r.name,r.visitors]),[["Chrome",2]]);
+  const cities=db.audience(site.id,now,end,"city").rows.filter(r=>r.name==="Springfield");
+  assert.equal(cities.length,3); // Same city name in separate subdivisions/countries remains separate.
+  assert.equal(db.audience(site.id,now,end,"os").rows[0].name,"Windows");
+  assert.equal(db.audience(site.id,now,end,"device").rows[0].name,"Desktop");
+  assert.equal(db.audience(site.id,now,end,"region").rows.length,4);
+});
+
+test("referrer lists omit direct and unknown sources while traffic totals retain them", t=>{
+ const {db,site,now,view}=fixture(t);
+ view({referrer:"",visitorId:randomUUID()});
+ view({referrer:"https://blog.test/internal",visitorId:randomUUID()});
+ view({referrer:"not-a-url",visitorId:randomUUID()});
+ view({referrer:"https://source.test/article",visitorId:randomUUID()});
+ const report=db.report(site.id,now,now+1);
+ assert.equal(report.totals.views,4);
+ assert.equal(report.totals.visits,4);
+ assert.deepEqual(report.referrers.map(r=>r.name),["https://source.test"]);
+});

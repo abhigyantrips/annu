@@ -1,0 +1,57 @@
+import { Card } from "@/components/ui/card";
+import { ArrowDownLeft, ExternalLink, Link2 } from "lucide-react";
+
+import { DataTable } from "@/components/data-table";
+import { ReportPage } from "@/features/reports/report-page";
+import { duration, siteName } from "@/lib/format";
+export function Page() {
+  return (
+    <ReportPage>
+      {({ report }) => (
+        <Card className="panel">
+          <div className="panel-heading">
+            <div>
+              <h2>Referrers</h2>
+              <span className="subtle">
+                Referring websites only.
+              </span>
+            </div>
+            <ArrowDownLeft size={19} />
+          </div>
+          <DataTable
+            rows={report.referrers}
+            columns={[
+              {
+                key: "name",
+                name: "Referring Website",
+                render: (r) => (
+                  <span className="referrer-cell">
+                    <span className="domain-icon">
+                      <Link2 size={15} />
+                    </span>
+                    {r.name.startsWith("http") ? (
+                      <a href={r.name} target="_blank" rel="noreferrer">
+                        {siteName(r.name)}
+                        <ExternalLink size={12} />
+                      </a>
+                    ) : (
+                      r.name
+                    )}
+                  </span>
+                ),
+              },
+              { key: "visitors", name: "Visitors", numeric: true },
+              { key: "visits", name: "Visits", numeric: true },
+              {
+                key: "duration",
+                name: "Time per Visit",
+                numeric: true,
+                render: (r) => duration(r.duration),
+              },
+            ]}
+          />
+        </Card>
+      )}
+    </ReportPage>
+  );
+}

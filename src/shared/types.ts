@@ -22,7 +22,7 @@ export type Report = {
     live: number;
     clicks: number;
   };
-  series: { date: string; visitors: number; views: number }[];
+  series: { date: string; visitors: number; visits: number; views: number }[];
   paths: {
     path: string;
     visitors: number;
@@ -77,3 +77,9 @@ export type Timeline = {
   totalVisits: number;
   nextBefore: number | null;
 };
+
+export type Environment = { browser: string | null; os: string | null; device: string | null };
+export const audienceDimensions = ["browser", "os", "device", "country", "region", "city"] as const;
+export type AudienceDimension = typeof audienceDimensions[number];
+export type AudienceRow = { name: string; country: string | null; region: string | null; visitors: number };
+export type Audience = { rows: AudienceRow[]; visitors: number };

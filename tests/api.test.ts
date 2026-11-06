@@ -49,6 +49,17 @@ test("authenticated API: ingestion validation, geo trust, reports, export, and l
   });
   assert.equal(create.statusCode, 200, create.body);
   const site = create.json();
+  const hourlyReport = await app.inject({
+    url: `/api/sites/${site.id}/report?from=0&to=3600000&bucket=hour`,
+    headers: { cookie },
+  });
+  assert.equal(hourlyReport.statusCode, 200);
+  assert.deepEqual(hourlyReport.json().series, []);
+  assert.equal((await app.inject({
+    url: `/api/sites/${site.id}/report?from=0&to=3600000&bucket=minute`,
+    headers: { cookie },
+  })).statusCode, 400);
+
   const blocked = await app.inject({
     method: "POST",
     url: "/api/sites",
@@ -122,6 +133,14 @@ test("authenticated API: ingestion validation, geo trust, reports, export, and l
   assert.equal(report.statusCode, 200, report.body);
   assert.equal(report.json().totals.views, 1);
   assert.equal(report.json().locations[0].country, "Unknown");
+  const audienceUrl = `/api/sites/${site.id}/audience?${range}`;
+  assert.equal((await app.inject(`${audienceUrl}&dimension=browser`)).statusCode, 401);
+  const audience = await app.inject({url:`${audienceUrl}&dimension=browser`, headers:{cookie}});
+  assert.equal(audience.statusCode,200,audience.body);
+  assert.deepEqual(audience.json(),{visitors:1,rows:[{name:"Chrome",country:null,region:null,visitors:1}]});
+  assert.equal((await app.inject({url:`${audienceUrl}&dimension=invalid`,headers:{cookie}})).statusCode,400);
+  assert.equal((await app.inject({url:audienceUrl,headers:{cookie}})).statusCode,400);
+
   const json = await app.inject({
     url: `/api/sites/${site.id}/export?${range}&format=json`,
     headers: { cookie },

@@ -7,6 +7,8 @@ import { Readable } from "node:stream";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { isbot } from "isbot";
+import { detectEnvironment } from "./environment.js";
+import { audienceDimensions } from "../shared/types.js";
 import { eventSchema, type Geo } from "./events.js";
 import { DatabaseWorker } from "./workers.js";
 import { parseDashboardPath } from "../shared/dashboard-routes.js";
@@ -262,7 +264,8 @@ export async function buildApp(options: AppOptions) {
       geo.region = header("cf-region-code", 100);
       geo.city = header("cf-ipcity", 150);
     }
-    const result = await writer.call("ingest", parsed.data, origin, geo);
+    const environment = parsed.data.type === "view" ? detectEnvironment(request.headers["user-agent"]) : undefined;
+    const result = await writer.call("ingest", parsed.data, origin, geo, Date.now(), environment);
     if (result === "rejected") return reply.code(403).send();
     return reply
       .header("Access-Control-Allow-Origin", origin)
@@ -273,13 +276,22 @@ export async function buildApp(options: AppOptions) {
   app.get<{ Params: { siteId: string } }>(
     "/api/sites/:siteId/report",
     async (request) => {
-      const range = querySchema.parse(request.query);
+      const range = querySchema.and(z.object({ bucket: z.enum(["hour", "day"]).default("day") })).parse(request.query);
       return reader.call(
         "report",
         uuid(request.params.siteId),
         range.from,
         range.to,
+        Date.now(),
+        range.bucket,
       );
+    },
+  );
+  app.get<{ Params: { siteId: string } }>(
+    "/api/sites/:siteId/audience",
+    async (request) => {
+      const query = querySchema.and(z.object({dimension:z.enum(audienceDimensions)})).parse(request.query);
+      return reader.call("audience", uuid(request.params.siteId), query.from, query.to, query.dimension);
     },
   );
   app.get<{ Params: { siteId: string } }>(

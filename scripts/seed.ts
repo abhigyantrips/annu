@@ -48,6 +48,14 @@ const rand = () => {
   return state / 4294967296;
 };
 const pick = <T>(values: T[]) => values[Math.floor(rand() * values.length)];
+const environments = [
+  {browser:"Chrome",os:"Windows",device:"Desktop"},
+  {browser:"Safari",os:"iOS",device:"Mobile"},
+  {browser:"Firefox",os:"Linux",device:"Desktop"},
+  {browser:"Safari",os:"macOS",device:"Desktop"},
+  {browser:"Chrome",os:"Android",device:"Mobile"},
+  {browser:"Safari",os:"iOS",device:"Tablet"},
+];
 const now = Date.now();
 const today = new Date();
 today.setUTCHours(0, 0, 0, 0);
@@ -97,6 +105,7 @@ for (let day = 29; day >= 0; day--) {
         "https://abhi.now",
         geo,
         started,
+        environments[visitors.indexOf(visitorId) % environments.length],
       );
       const durationMs = 35_000 + Math.floor(rand() * 230_000);
       db.ingest(

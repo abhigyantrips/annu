@@ -14,6 +14,9 @@ import {
   type Geo,
 } from "./events.js";
 import type {
+  Audience,
+  AudienceDimension,
+  Environment,
   Activity,
   Dimension,
   Label,
@@ -71,7 +74,7 @@ export class AnalyticsDatabase {
     this.db.insert(schema.sites).values(site).run();
     return site;
   }
-  ingest(event: AnalyticsEvent, origin: string, geo: Geo, now = Date.now()) {
+  ingest(event: AnalyticsEvent, origin: string, geo: Geo, now = Date.now(), environment?: Environment) {
     const { db } = this;
     const site = db
       .select()
@@ -145,6 +148,9 @@ export class AnalyticsDatabase {
               lastSeen: now,
               referrer: referrerOrigin(event.referrer, site.domains),
               ...geo,
+              browser: environment?.browser ?? null,
+              os: environment?.os ?? null,
+              device: environment?.device ?? null,
               source: event.utm.source || null,
               medium: event.utm.medium || null,
               campaign: event.utm.campaign || null,
@@ -319,7 +325,7 @@ export class AnalyticsDatabase {
       .where(and(eq(schema.labels.siteId, siteId), eq(schema.labels.id, id)))
       .run();
   }
-  report(siteId: string, from: number, to: number, now = Date.now()): Report {
+  report(siteId: string, from: number, to: number, now = Date.now(), bucket: "hour" | "day" = "day"): Report {
     const { db } = this;
     const totals = db.get<Report["totals"]>(sql`
       SELECT count(DISTINCT visitor_id) AS visitors, count(DISTINCT visit_id) AS visits,
@@ -328,14 +334,15 @@ export class AnalyticsDatabase {
         (SELECT count(*) FROM clicks WHERE site_id=${siteId} AND at >= ${from} AND at < ${to}) AS clicks
       FROM pageviews WHERE site_id=${siteId} AND started_at >= ${from} AND started_at < ${to}`)!;
     totals.duration ||= 0;
+    const dateFormat = bucket === "hour" ? "%Y-%m-%dT%H:00:00Z" : "%Y-%m-%d";
     const series = db.all<Report["series"][number]>(
-      sql`SELECT strftime('%Y-%m-%d',started_at/1000,'unixepoch') AS date, count(DISTINCT visitor_id) AS visitors, count(*) AS views FROM pageviews WHERE site_id=${siteId} AND started_at >= ${from} AND started_at < ${to} GROUP BY date ORDER BY date`,
+      sql`SELECT strftime(${dateFormat},started_at/1000,'unixepoch') AS date, count(DISTINCT visitor_id) AS visitors, count(DISTINCT visit_id) AS visits, count(*) AS views FROM pageviews WHERE site_id=${siteId} AND started_at >= ${from} AND started_at < ${to} GROUP BY date ORDER BY date`,
     );
     const paths = db.all<Report["paths"][number]>(
       sql`SELECT path, count(DISTINCT visitor_id) AS visitors, count(DISTINCT visit_id) AS visits, count(*) AS views, sum(duration_ms) * 1.0 / count(DISTINCT visit_id) AS duration FROM pageviews WHERE site_id=${siteId} AND started_at >= ${from} AND started_at < ${to} GROUP BY path ORDER BY views DESC, path LIMIT 1000`,
     );
     const referrers = db.all<Report["referrers"][number]>(
-      sql`WITH scoped AS (SELECT p.visitor_id,p.visit_id,p.duration_ms,coalesce(v.referrer,'Direct / unknown') AS name FROM pageviews p JOIN visits v ON v.id=p.visit_id WHERE p.site_id=${siteId} AND p.started_at >= ${from} AND p.started_at < ${to}) SELECT name,count(DISTINCT visitor_id) AS visitors,count(DISTINCT visit_id) AS visits,sum(duration_ms)*1.0/count(DISTINCT visit_id) AS duration FROM scoped GROUP BY name ORDER BY visits DESC LIMIT 1000`,
+      sql`WITH scoped AS (SELECT p.visitor_id,p.visit_id,p.duration_ms,v.referrer AS name FROM pageviews p JOIN visits v ON v.id=p.visit_id WHERE p.site_id=${siteId} AND p.started_at >= ${from} AND p.started_at < ${to} AND v.referrer IS NOT NULL AND v.referrer <> '') SELECT name,count(DISTINCT visitor_id) AS visitors,count(DISTINCT visit_id) AS visits,sum(duration_ms)*1.0/count(DISTINCT visit_id) AS duration FROM scoped GROUP BY name ORDER BY visits DESC LIMIT 1000`,
     );
     const locations = db.all<Report["locations"][number]>(
       sql`SELECT coalesce(v.country,'Unknown') AS country, coalesce(v.region,'Unknown') AS region, coalesce(v.city,'Unknown') AS city,count(DISTINCT p.visitor_id) AS visitors,count(DISTINCT p.visit_id) AS visits FROM pageviews p JOIN visits v ON v.id=p.visit_id WHERE p.site_id=${siteId} AND p.started_at >= ${from} AND p.started_at < ${to} GROUP BY country,region,city ORDER BY visitors DESC LIMIT 1000`,
@@ -380,6 +387,25 @@ export class AnalyticsDatabase {
       utm,
       performance,
     };
+  }
+  audience(siteId: string, from: number, to: number, dimension: AudienceDimension): Audience {
+    // Never sum city-level uniques to get country/browser totals: a visitor can appear in several groups.
+    const column = sql.identifier(dimension);
+    const geographic = ["country", "region", "city"].includes(dimension);
+    const country = geographic ? sql`nullif(v.country,'')` : sql`NULL`;
+    const region = dimension === "region" || dimension === "city" ? sql`nullif(v.region,'')` : sql`NULL`;
+    const rows = this.db.all<Audience["rows"][number]>(sql`
+      WITH scoped AS (
+        SELECT p.visitor_id,coalesce(nullif(v.${column},''),'Unknown') AS name,${country} AS country,${region} AS region
+        FROM pageviews p JOIN visits v ON v.id=p.visit_id
+        WHERE p.site_id=${siteId} AND p.started_at >= ${from} AND p.started_at < ${to}
+          AND v.${column} IS NOT NULL AND v.${column} <> ''
+      ) SELECT name,country,region,count(DISTINCT visitor_id) AS visitors FROM scoped
+      GROUP BY name,country,region ORDER BY visitors DESC,name,country,region LIMIT 10`);
+    const total = this.db.get<{visitors:number}>(sql`
+      SELECT count(DISTINCT visitor_id) AS visitors FROM pageviews
+      WHERE site_id=${siteId} AND started_at >= ${from} AND started_at < ${to}`)!;
+    return {rows, visitors: total.visitors};
   }
   activity(
     siteId: string,

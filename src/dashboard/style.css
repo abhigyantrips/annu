@@ -1973,3 +1973,16 @@ pre {
   color: var(--secondary-foreground);
 }
 [data-slot="native-select"]:hover { background: var(--control-hover); }
+
+.audience-grid { margin-top: 24px; }
+.audience-heading { flex-wrap: wrap; gap: 12px; }
+.audience-columns { display: flex; justify-content: space-between; padding: 0 20px 8px; color: var(--muted-foreground); font-size: 10px; }
+.audience-rows { padding: 0 20px 16px; }
+.audience-row { display: flex; align-items: center; gap: 10px; min-height: 38px; font-size: 11px; }
+.audience-track { position: relative; flex: 1; min-width: 0; height: 28px; display: flex; align-items: center; }
+.audience-bar { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: #f0f4eb; }
+.audience-name { position: relative; padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.audience-row strong { min-width: 28px; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.audience-share { width: 42px; text-align: right; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.audience-panel > .panel-note { margin-top: auto; }
+@media (max-width: 480px) { .audience-rows { padding-inline: 12px; } .audience-row { gap: 8px; } }
