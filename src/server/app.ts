@@ -6,6 +6,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { Readable } from "node:stream";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { isbot } from "isbot";
 import { eventSchema, type Geo } from "./events.js";
 import { DatabaseWorker } from "./workers.js";
 import { parseDashboardPath } from "../shared/dashboard-routes.js";
@@ -17,6 +18,7 @@ export type AppOptions = {
   sessionSecret: string;
   publicOrigin?: string;
   trustCloudflare?: boolean;
+  disableBotCheck?: boolean;
   retentionDays?: number;
   logger?: boolean;
   serveStatic?: boolean;
@@ -227,6 +229,13 @@ export async function buildApp(options: AppOptions) {
     const origin = request.headers.origin;
     if (!parsed.success || !origin || origin === "null")
       return reply.code(400).send();
+    // Match Umami: silently discard known bots before doing any database work.
+    if (!options.disableBotCheck && isbot(request.headers["user-agent"]))
+      return reply
+        .header("Access-Control-Allow-Origin", origin)
+        .header("Vary", "Origin")
+        .code(204)
+        .send();
     const geo: Geo = { country: null, region: null, city: null };
     if (options.trustCloudflare) {
       const header = (name: string, max: number) => {

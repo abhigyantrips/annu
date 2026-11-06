@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { buildApp } from "../src/server/app.js";
 
+const browserUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+
 test("authenticated API: ingestion validation, geo trust, reports, export, and logout", async (t) => {
   const dir = mkdtempSync(join(tmpdir(), "annu-api-"));
   const app = await buildApp({
@@ -71,6 +73,7 @@ test("authenticated API: ingestion validation, geo trust, reports, export, and l
       method: "POST",
       url: "/api/collect",
       headers: {
+        "user-agent": browserUserAgent,
         origin: "https://blog.test",
         "content-type": "text/plain",
         "cf-ipcountry": "IN",
@@ -90,7 +93,7 @@ test("authenticated API: ingestion validation, geo trust, reports, export, and l
       await app.inject({
         method: "POST",
         url: "/api/collect",
-        headers: { origin: "https://wrong.test" },
+        headers: { origin: "https://wrong.test", "user-agent": browserUserAgent },
         payload: event,
       })
     ).statusCode,
@@ -181,6 +184,7 @@ test("Cloudflare country, region and encoded city are used only when explicitly 
     url: "/api/collect",
     headers: {
       origin: "https://blog.test",
+      "user-agent": browserUserAgent,
       "cf-ipcountry": "BR",
       "cf-region-code": "SP",
       "cf-ipcity": "S%C3%A3o%20Paulo",
@@ -230,3 +234,58 @@ test("login rate limits password attempts to five per minute", async (t) => {
   assert.equal(limited.statusCode, 429);
   assert.ok(limited.headers["retry-after"]);
 });
+
+for (const disableBotCheck of [false, true]) {
+  test(`bot filtering excludes all event types (disabled=${disableBotCheck})`, async (t) => {
+    const dir = mkdtempSync(join(tmpdir(), "annu-bots-"));
+    const app = await buildApp({
+      databasePath: join(dir, "test.db"),
+      adminPassword: "test-password-only",
+      sessionSecret: "test-only-session-secret-with-32-characters",
+      ...(disableBotCheck ? { disableBotCheck: true } : {}),
+      serveStatic: false,
+    });
+    t.after(async () => {
+      await app.close();
+      rmSync(dir, { recursive: true, force: true });
+    });
+    const login = await app.inject({ method: "POST", url: "/api/login", payload: { password: "test-password-only" } });
+    const cookie = (login.headers["set-cookie"] as string).split(";")[0];
+    const site = (await app.inject({ method: "POST", url: "/api/sites", headers: { cookie }, payload: { name: "Blog", domains: ["blog.test"] } })).json();
+    const send = (payload: object, userAgent?: string) => app.inject({
+      method: "POST", url: "/api/collect",
+      headers: { origin: "https://blog.test", "content-type": "text/plain", "user-agent": userAgent ?? "" },
+      payload: JSON.stringify(payload),
+    });
+    const browser = browserUserAgent;
+    const base = { siteId: site.id, visitorId: randomUUID(), viewId: randomUUID() };
+    // Seed a human view so bot follow-up events would otherwise update real data.
+    assert.equal((await send({ ...base, type: "view", url: "https://blog.test/" }, browser)).statusCode, 204);
+    const bots = [
+      "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+      "curl/8.7.1",
+      "Mozilla/5.0 AppleWebKit/537.36 HeadlessChrome/130.0.0.0 Safari/537.36",
+    ];
+    for (const userAgent of bots) {
+      const response = await send({ ...base, visitorId: randomUUID(), viewId: randomUUID(), type: "view", url: "https://blog.test/bot" }, userAgent);
+      assert.equal(response.statusCode, 204);
+      assert.equal(response.body, "");
+      assert.equal(response.headers["access-control-allow-origin"], "https://blog.test");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    for (const event of [
+      { ...base, type: "time", durationMs: 10 },
+      { ...base, type: "click", eventId: randomUUID(), destination: "https://other.test/", kind: "link" },
+      { ...base, type: "vital", metric: "LCP", value: 100 },
+    ]) assert.equal((await send(event, bots[0])).statusCode, 204);
+    // A missing UA is accepted, matching Umami/isbot's behavior.
+    assert.equal((await send({ ...base, visitorId: randomUUID(), viewId: randomUUID(), type: "view", url: "https://blog.test/no-ua" })).statusCode, 204);
+    const report = (await app.inject({ url: `/api/sites/${site.id}/report?from=${Date.now() - 60_000}&to=${Date.now() + 1000}`, headers: { cookie } })).json();
+    assert.equal(report.totals.views, disableBotCheck ? 6 : 2);
+    assert.equal(report.totals.visitors, disableBotCheck ? 6 : 2);
+    assert.equal(report.totals.duration, disableBotCheck ? 10 / 6 : 0);
+    assert.equal(report.totals.clicks, disableBotCheck ? 1 : 0);
+    assert.equal(report.performance.length, disableBotCheck ? 1 : 0);
+  });
+}

@@ -53,7 +53,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Sidebar, SidebarProvider, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter, SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 import { parseDashboardPath, dashboardPath, type Page } from "../shared/dashboard-routes";
-import "./style.css";
+import "@/style.css";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(n || 0);

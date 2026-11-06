@@ -9,6 +9,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env (at least 12 characters)}
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
       TRUST_CLOUDFLARE_HEADERS: ${TRUST_CLOUDFLARE_HEADERS:-false}
+      DISABLE_BOT_CHECK: ${DISABLE_BOT_CHECK:-false}
       RETENTION_DAYS: ${RETENTION_DAYS:-400}
     volumes:
       - annu-data:/app/data

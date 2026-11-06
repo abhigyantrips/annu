@@ -28,6 +28,7 @@ const app = await buildApp({
   sessionSecret,
   publicOrigin: process.env.PUBLIC_ORIGIN || undefined,
   trustCloudflare: process.env.TRUST_CLOUDFLARE_HEADERS === "true",
+  disableBotCheck: process.env.DISABLE_BOT_CHECK === "true",
   retentionDays,
   logger: true,
 });
