@@ -1018,6 +1018,7 @@ function SiteSettings({
           <Globe2 size={18} />
         </div>
         <form
+          className="site-details-form"
           onSubmit={async (e) => {
             e.preventDefault();
             setBusy(true);
@@ -1099,20 +1100,20 @@ function SiteSettings({
             <div className="panel-heading">
               <div>
                 <h2>Privacy</h2>
-                <span className="subtle">
-                  No IP storage. No fingerprinting. No retry queue.
-                </span>
               </div>
             </div>
             <div className="privacy-copy">
-              <p>
-                A random UUID stays in each visitor’s browser. Clearing browser
-                storage creates a new identity.
-              </p>
-              <p>
-                Detailed history and statistics are kept for 400 days by
-                default. Retention is configured on your server.
-              </p>
+              <ul>
+                <li>No IP storage, fingerprinting, or retry queue.</li>
+                <li>
+                  A random UUID stays in each visitor’s browser. Clearing browser
+                  storage creates a new identity.
+                </li>
+                <li>
+                  Detailed history and statistics are kept for 400 days by
+                  default. Retention is configured on your server.
+                </li>
+              </ul>
               <h3>Exclude Your Own Visits</h3>
               <p>
                 Run this on your <strong>website’s origin</strong> in the browser
@@ -1133,7 +1134,7 @@ function SiteSettings({
               <div>
                 <h2>Tracking Script</h2>
                 <span className="subtle">
-                  This loader starts after page load. Requests are best effort.
+                  Paste this snippet once into your shared site layout to start tracking. It loads the tracker automatically after page load.
                 </span>
               </div>
               <Code2 size={19} />
@@ -1167,20 +1168,22 @@ function SiteSettings({
                 </label>
               ))}
             </div>
-            <div className="code-header">
-              <span>
-                Paste into your site layout · for Astro, add{" "}
-                <code>is:inline</code> to the opening script tag
-              </span>
-              <CopyButton value={embed} />
+            <div className="tracking-code">
+              <div className="code-header">
+                <span>
+                  For Astro, add{" "}
+                  <code>is:inline</code> to the opening script tag
+                </span>
+                <CopyButton value={embed} />
+              </div>
+              <pre>
+                <code>{embed}</code>
+              </pre>
             </div>
-            <pre>
-              <code>{embed}</code>
-            </pre>
             <div className="panel-note">
-              Outgoing links are opt-in: mark individual links with{" "}
+              Optional outgoing link tracking: mark individual links with{" "}
               <code>data-annu-link</code> or enable “All Outgoing Links” above
-              with <code>data-links="true"</code> on the tracker. Downloads and
+              before copying the snippet. Downloads and
               mailto links are included. Astro ClientRouter is supported.
             </div>
           </Card>
