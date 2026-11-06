@@ -21,6 +21,7 @@ export function Page() {
           </div>
           <DataTable
             rows={report.locations}
+            emptyText="You’re on your way to be worldwide!"
             columns={[
               {
                 key: "country",

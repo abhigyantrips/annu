@@ -16,14 +16,14 @@ export const dateTime = (n: number) =>
     minute: "2-digit",
   });
 export const colors = [
-  "#397b68",
-  "#83a893",
-  "#b6c8a6",
-  "#d2b783",
-  "#b39399",
-  "#8b9aaf",
-  "#b7c6ca",
-  "#d4c8b9",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+  "var(--chart-7)",
+  "var(--chart-8)",
 ];
 export const countryName = (code: string) => {
   try {

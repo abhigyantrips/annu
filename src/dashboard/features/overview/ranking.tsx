@@ -8,12 +8,14 @@ export function Ranking({
   title,
   subtitle,
   rows,
+  total,
   onMore,
   type,
 }: {
   title: string;
   subtitle: string;
   rows: { name: string; value: number }[];
+  total: number;
   onMore: () => void;
   type: "path" | "referrer";
 }) {
@@ -33,9 +35,8 @@ export function Ranking({
         <Empty />
       ) : (
         <div className="ranking-rows">
-          {rows.slice(0, 5).map((r, i) => (
+          {rows.slice(0, 5).map((r) => (
             <div className="ranking-row" key={r.name}>
-              <span className="rank">{String(i + 1).padStart(2, "0")}</span>
               <div className="ranking-track">
                 <div
                   className="ranking-bar"
@@ -46,6 +47,9 @@ export function Ranking({
                 </span>
               </div>
               <strong>{fmt(r.value)}</strong>
+              <span className="ranking-share">
+                {(total ? (r.value / total) * 100 : 0).toFixed(1)}%
+              </span>
             </div>
           ))}
         </div>

@@ -24,10 +24,15 @@ test("Today is UTC midnight while Last 24 Hours is a rolling window; other range
     },
   );
 });
+test("missing URL filters default to a rolling 24-hour window", () => {
+  const filters = validateFilters({});
+  assert.equal(filters.range, "24h");
+  assert.equal(dateRange(filters, now).from, now - 86400000);
+});
 test("URL filters reject unknown presets and invalid calendar dates", () => {
   assert.deepEqual(
     validateFilters({ range: "bad", start: "2026-02-30", end: "bad" }),
-    { range: "7", start: undefined, end: undefined },
+    { range: "24h", start: undefined, end: undefined },
   );
 });
 test("hourly charts fill missing buckets without losing partial edge hours or confusing days", () => {

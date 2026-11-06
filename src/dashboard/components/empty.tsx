@@ -1,13 +1,20 @@
+import { DesertIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+
 export function Empty({
-  title = "No Data Yet",
-  text = "Data will appear here as people visit your website.",
+  text = "Keep your door open, and visitors will surely come through.",
 }: {
-  title?: string;
   text?: string;
 }) {
   return (
     <div className="empty">
-      <h3>{title}</h3>
+      <HugeiconsIcon
+        icon={DesertIcon}
+        size={80}
+        strokeWidth={1.25}
+        className="empty-icon"
+        aria-hidden="true"
+      />
       <p>{text}</p>
     </div>
   );

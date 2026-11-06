@@ -18,7 +18,7 @@ export function validateFilters(input: Record<string, unknown>): Filters {
   return {
     range: datePresets.includes(input.range as DatePreset)
       ? (input.range as DatePreset)
-      : "7",
+      : "24h",
     start: validDate(input.start) ? input.start : undefined,
     end: validDate(input.end) ? input.end : undefined,
   };

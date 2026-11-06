@@ -97,6 +97,8 @@ export function DataTable({
                       }
                     >
                       <Button
+                        variant="ghost"
+                        className="table-sort"
                         onClick={() => {
                           setSort({
                             key: c.key,

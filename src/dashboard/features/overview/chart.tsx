@@ -47,13 +47,13 @@ export function Chart({
           </span>
         </div>
         <div
-          className="flex flex-wrap items-center gap-4 text-xs"
+          className="chart-legend flex flex-wrap items-center gap-4 text-sm"
           aria-label="Chart legend"
         >
           <span className="flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 rounded-sm"
-              style={{ background: "#397b68" }}
+              style={{ background: "var(--chart-1)" }}
               aria-hidden="true"
             />
             Visitors
@@ -61,7 +61,7 @@ export function Chart({
           <span className="flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 rounded-sm"
-              style={{ background: "#b8d2c8" }}
+              style={{ background: "var(--chart-2)" }}
               aria-hidden="true"
             />
             Views
@@ -69,14 +69,14 @@ export function Chart({
         </div>
       </div>
       <div
-        style={{ height: 240, width: "100%", minWidth: 0 }}
+        className="chart-frame"
         role="img"
         aria-label={`${hourly ? "Hourly" : "Daily"} visitors and page views, UTC. Each bar shows views with visitors overlaid. Hover or use arrow keys to inspect both counts.`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={points}
-            margin={{ top: 12, right: 20, bottom: 8, left: 0 }}
+            margin={{ top: 8, right: 12, bottom: 0, left: 0 }}
             accessibilityLayer
           >
             <CartesianGrid vertical={false} stroke="var(--border)" />
@@ -84,19 +84,24 @@ export function Chart({
               dataKey="at"
               tickFormatter={label}
               minTickGap={50}
-              tick={{ fontSize: 11 }}
+              height={40}
+              tickMargin={12}
+              interval="preserveStartEnd"
+              tick={{ fontSize: "var(--text-sm)", fill: "var(--muted-foreground)" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
+              width="auto"
+              tickMargin={8}
               allowDecimals={false}
               tickFormatter={fmt}
-              tick={{ fontSize: 11 }}
+              tick={{ fontSize: "var(--text-sm)", fill: "var(--muted-foreground)" }}
               axisLine={false}
               tickLine={false}
             />
             <Tooltip
-              cursor={{ fill: "#397b68", fillOpacity: 0.06 }}
+              cursor={{ fill: "var(--chart-1)", fillOpacity: 0.06 }}
               content={({ active, payload, label: at }) => {
                 if (!active || !payload?.length) return null;
                 const point = payload[0].payload as (typeof points)[number];
@@ -107,12 +112,12 @@ export function Chart({
                       borderRadius: 8,
                       border: "1px solid var(--border)",
                       padding: "10px 12px",
-                      fontSize: 12,
+                      fontSize: "var(--text-sm)",
                     }}
                   >
                     <p className="mb-2">{label(Number(at))} UTC</p>
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-1">
-                      <dt style={{ color: "#397b68" }}>Visitors</dt>
+                      <dt style={{ color: "var(--chart-1)" }}>Visitors</dt>
                       <dd className="text-right font-medium">
                         {fmt(point.visitors)}
                       </dd>
@@ -128,7 +133,7 @@ export function Chart({
             <Bar
               dataKey="views"
               name="Views"
-              fill="#b8d2c8"
+              fill="var(--chart-2)"
               maxBarSize={48}
               isAnimationActive={false}
               activeBar={false}
@@ -151,7 +156,7 @@ export function Chart({
                       y={y}
                       width={width}
                       height={height}
-                      fill="#b8d2c8"
+                      fill="var(--chart-2)"
                       rx={2}
                     />
                     <rect
@@ -159,7 +164,7 @@ export function Chart({
                       y={y + height - visitorHeight}
                       width={width}
                       height={visitorHeight}
-                      fill="#397b68"
+                      fill="var(--chart-1)"
                       rx={2}
                     />
                   </g>

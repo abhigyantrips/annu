@@ -1,3 +1,4 @@
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Brand } from "@/components/brand";
 import { Empty } from "@/components/empty";
 import { Modal } from "@/components/modal";
@@ -19,13 +20,16 @@ export function SitePicker({ message }: { message?: string }) {
     <div className="site-picker">
       <header className="site-picker-header">
         <Brand />
-        <Button
-          variant="ghost"
-          onClick={() => void logout().catch((e) => setError(e.message))}
-        >
-          <LogOut size={14} />
-          Sign Out
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => void logout().catch((e) => setError(e.message))}
+          >
+            <LogOut size={14} />
+            Sign Out
+          </Button>
+          <ThemeToggle />
+        </div>
       </header>
       <main className="site-picker-main">
         <div className="page-heading">
@@ -63,7 +67,7 @@ export function SitePicker({ message }: { message?: string }) {
                   <Link
                     to="/$siteId"
                     params={{ siteId: site.id }}
-                    search={{ range: "7" }}
+                    search={{ range: "24h" }}
                   />
                 }
               >
@@ -79,8 +83,7 @@ export function SitePicker({ message }: { message?: string }) {
         ) : (
           <Card className="panel">
             <Empty
-              title="No Websites Yet"
-              text="Add a website to start collecting analytics."
+              text="Your next chapter starts here. Add a website to welcome your first visitors."
             />
           </Card>
         )}

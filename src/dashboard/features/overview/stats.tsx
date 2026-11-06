@@ -1,8 +1,36 @@
 import type { Report } from "../../../shared/types";
-import { Card } from "@/components/ui/card";
-import { ArrowDownLeft, Clock3, FileText, Users } from "lucide-react";
+import { CircleHelp } from "lucide-react";
+import { useId, useState } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { duration, fmt } from "@/lib/format";
+function MetricHelp({ title, note }: { title: string; note: string }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <Tooltip
+      open={open}
+      triggerId={id}
+      onOpenChange={(next, details) => {
+        // A tap opens help; outside presses, blur, and Escape dismiss it.
+        if (details.reason !== "trigger-press") setOpen(next);
+      }}
+    >
+      <TooltipTrigger
+        id={id}
+        type="button"
+        className="metric-help"
+        aria-label={`About ${title}`}
+        aria-describedby={open ? `${id}-content` : undefined}
+        onClick={() => setOpen(true)}
+      >
+        <CircleHelp size={16} aria-hidden="true" />
+      </TooltipTrigger>
+      <TooltipContent id={`${id}-content`} role="tooltip">{note}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function Stats({ report }: { report: Report }) {
   const t = report.totals;
   return (
@@ -11,36 +39,31 @@ export function Stats({ report }: { report: Report }) {
         {
           title: "Visitors",
           value: fmt(t.visitors),
-          icon: Users,
-          note: "Distinct browser identities",
+          note: "Distinct browser identities. A browser is counted once in the selected period.",
         },
         {
           title: "Visits",
           value: fmt(t.visits),
-          icon: ArrowDownLeft,
-          note: "30-minute activity windows",
+          note: "Visits are activity windows separated by at least 30 minutes of inactivity.",
         },
         {
           title: "Page Views",
           value: fmt(t.views),
-          icon: FileText,
-          note: "Total page views",
+          note: "Total page views in the selected period, including repeat views.",
         },
         {
           title: "Average Visit Duration",
           value: duration(t.duration),
-          icon: Clock3,
-          note: "Estimated active time",
+          note: "Estimated active reading time per visit, based on tracker heartbeats.",
         },
-      ].map(({ title, value, icon: Icon, note }) => (
-        <Card className="stat" key={title}>
+      ].map(({ title, value, note }) => (
+        <div className="stat" key={title}>
           <div className="stat-label">
             {title}
-            <Icon size={15} strokeWidth={1.6} />
+            <MetricHelp title={title} note={note} />
           </div>
           <div className="stat-value">{value}</div>
-          <div className="stat-note">{note}</div>
-        </Card>
+        </div>
       ))}
     </div>
   );

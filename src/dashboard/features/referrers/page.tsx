@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
-import { ArrowDownLeft, ExternalLink, Link2 } from "lucide-react";
+import { ArrowDownLeft, ExternalLink } from "lucide-react";
 
+import { SiteFavicon } from "@/components/site-favicon";
 import { DataTable } from "@/components/data-table";
 import { ReportPage } from "@/features/reports/report-page";
 import { duration, siteName } from "@/lib/format";
@@ -26,9 +27,7 @@ export function Page() {
                 name: "Referring Website",
                 render: (r) => (
                   <span className="referrer-cell">
-                    <span className="domain-icon">
-                      <Link2 size={15} />
-                    </span>
+                    <SiteFavicon domain={r.name} name={siteName(r.name)} />
                     {r.name.startsWith("http") ? (
                       <a href={r.name} target="_blank" rel="noreferrer">
                         {siteName(r.name)}

@@ -130,7 +130,7 @@ export function VisitorHistory({
           </div>
         </Card>
       ))}
-      {data && !data.visits.length && <Empty title="No Retained Visits" />}
+      {data && !data.visits.length && <Empty text="The trail is quiet for now. This visitor’s next visit will appear here." />}
       {data?.nextBefore && (
         <Button disabled={busy} onClick={() => void query.fetchNextPage()}>
           {busy ? <Loader2 size={14} className="spin" /> : null}Load Older

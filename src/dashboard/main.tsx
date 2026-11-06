@@ -1,3 +1,4 @@
+import { ThemeProvider } from "@/lib/theme";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queries";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -12,9 +13,11 @@ declare module "@tanstack/react-router" {
   }
 }
 createRoot(document.getElementById("root")!).render(
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <RouterProvider router={router} />
-    </TooltipProvider>
-  </QueryClientProvider>,
+  <ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <RouterProvider router={router} />
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>,
 );

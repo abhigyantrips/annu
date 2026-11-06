@@ -1,8 +1,8 @@
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Brand } from "@/components/brand";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { Modal } from "@/components/modal";
 import { SelectField } from "@/components/select-field";
-import { SiteFavicon } from "@/components/site-favicon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -28,6 +28,7 @@ import {
 import { DashboardContext } from "./context";
 import { ExportDialog } from "./export-dialog";
 import { SitePicker } from "./site-picker";
+import { CurrentSitePicker } from "./current-site-picker";
 const titles: Record<Page, string> = {
   overview: "Overview",
   pages: "Pages",
@@ -85,6 +86,7 @@ export function DashboardLayout() {
       >
         <DashboardSidebar
           page={page}
+          sitePicker={<CurrentSitePicker placement="sidebar" />}
           setPage={navigatePage}
           onHome={() => void navigate({ to: "/" })}
           onLogout={() => void logout().catch((e) => setError(e.message))}
@@ -92,35 +94,25 @@ export function DashboardLayout() {
         <div className="main-area">
           <header className="topbar">
             <div className="mobile-nav flex items-center gap-2 md:hidden">
-              <SidebarTrigger />
+              <SidebarTrigger variant="outline" size="icon" className="mobile-menu-button" />
               <Brand />
             </div>
             <div className="topbar-right">
               {page !== "settings" && (
                 <Button
-                  variant={live ? "secondary" : "ghost"}
+                  variant="secondary"
+                  className="live-toggle"
+                  data-live={live}
                   aria-pressed={live}
                   onClick={() => setLive(!live)}
                 >
                   {live ? "Live On" : "Live Off"}
                 </Button>
               )}
-              <SelectField
-                label="Current Website"
-                value={site.id}
-                onValueChange={(id) =>
-                  void navigate({
-                    to: dashboardPath(id, page),
-                    search: filters,
-                  })
-                }
-                className="topbar-site-picker"
-                options={(sites.data || []).map((s) => ({
-                  value: s.id,
-                  label: s.name,
-                  icon: <SiteFavicon domain={s.domains[0]} name={s.name} />,
-                }))}
-              />
+              <div className="site-theme-controls">
+                <CurrentSitePicker placement="topbar" />
+                <ThemeToggle />
+              </div>
             </div>
           </header>
           <main>

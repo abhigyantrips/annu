@@ -20,7 +20,7 @@ export function Page() {
           </div>
           <DataTable
             rows={report.outbound}
-            emptyText="Add data-annu-link to the links you’d like to understand, or enable all outgoing links in your tracker."
+            emptyText="Good links lead to new adventures. Enable outgoing-link tracking to follow them."
             columns={[
               {
                 key: "destination",

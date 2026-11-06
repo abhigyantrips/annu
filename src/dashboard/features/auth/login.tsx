@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowUpRight, Loader2 } from "lucide-react";
 import { useState } from "react";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Brand } from "@/components/brand";
 import { api, ApiError } from "@/lib/api";
 export function Login({ onLogin }: { onLogin: () => void }) {
@@ -12,7 +13,10 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   return (
     <div className="login-page">
       <div className="login-card">
-        <Brand />
+        <div className="flex items-center justify-between gap-4">
+          <Brand />
+          <ThemeToggle />
+        </div>
         <form
           onSubmit={async (e) => {
             e.preventDefault();

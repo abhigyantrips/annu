@@ -20,6 +20,7 @@ export function Page() {
                 name: p.path,
                 value: p.views,
               }))}
+              total={report.totals.views}
               type="path"
               onMore={() => setPage("pages")}
             />
@@ -30,6 +31,7 @@ export function Page() {
                 name: r.name,
                 value: r.visits,
               }))}
+              total={report.totals.visits}
               type="referrer"
               onMore={() => setPage("referrers")}
             />

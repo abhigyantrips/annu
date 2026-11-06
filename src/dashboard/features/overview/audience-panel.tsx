@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowUpRight,
   Loader2,
-  Globe2,
-  Monitor,
-  Smartphone,
-  Tablet,
-  AppWindow,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EnvironmentIcon } from "@/components/environment-icon";
 import { CountryFlag } from "@/components/country-flag";
 import { Empty } from "@/components/empty";
 import { api } from "@/lib/api";
@@ -47,28 +44,6 @@ function rowLabel(row: AudienceRow, dimension: AudienceDimension) {
   }
   return row.name;
 }
-function EnvironmentIcon({
-  name,
-  dimension,
-}: {
-  name: string;
-  dimension: AudienceDimension;
-}) {
-  const Icon =
-    dimension === "device"
-      ? { Mobile: Smartphone, Tablet, Desktop: Monitor, TV: Monitor }[name] ||
-        AppWindow
-      : dimension === "browser"
-        ? Globe2
-        : Monitor;
-  return (
-    <Icon
-      size={17}
-      className="shrink-0 text-muted-foreground"
-      aria-hidden="true"
-    />
-  );
-}
 export function AudiencePanel({
   kind,
   from,
@@ -78,7 +53,7 @@ export function AudiencePanel({
   from: number;
   to: number;
 }) {
-  const { site } = useDashboard();
+  const { site, navigatePage } = useDashboard();
   const [dimension, setDimension] = useState<AudienceDimension>(
     groups[kind][0].value,
   );
@@ -138,7 +113,7 @@ export function AudiencePanel({
           </Button>
         </div>
       ) : !query.data?.rows.length ? (
-        <Empty />
+        <Empty text={kind === "location" ? "You’re on your way to be worldwide!" : undefined} />
       ) : (
         <div className="audience-rows">
           {query.data.rows.map((row) => {
@@ -172,10 +147,16 @@ export function AudiencePanel({
           })}
         </div>
       )}
-      <div className="panel-note">
-        Top 10 by visitors. A visitor may appear in multiple rows.{" "}
-        {kind === "location" ? "Locations are approximate." : ""}
-      </div>
+      {kind === "location" && (
+        <Button
+          variant="link"
+          className="w-full border-t rounded-none"
+          onClick={() => navigatePage("locations")}
+        >
+          Explore Locations
+          <ArrowUpRight size={14} />
+        </Button>
+      )}
     </Card>
   );
 }

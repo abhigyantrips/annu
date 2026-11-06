@@ -49,8 +49,7 @@ export function Utm({ report, site }: { report: Report; site: Site }) {
         </div>
         {!rows.length ? (
           <Empty
-            title={`No ${dimension[0].toUpperCase() + dimension.slice(1)} Tags Yet`}
-            text={`Share a link with utm_${dimension} to see where visits come from.`}
+            text={`Every journey starts with a link. Share one with utm_${dimension} to see where visits come from.`}
           />
         ) : (
           <div className="utm-layout">
@@ -67,6 +66,7 @@ export function Utm({ report, site }: { report: Report; site: Site }) {
                     nameKey="name"
                     innerRadius={72}
                     outerRadius={100}
+                    stroke="var(--card)"
                     isAnimationActive={false}
                   >
                     {slices.map((slice, index) => (
@@ -74,6 +74,13 @@ export function Utm({ report, site }: { report: Report; site: Site }) {
                     ))}
                   </Pie>
                   <Tooltip
+                    contentStyle={{
+                      background: "var(--popover)",
+                      color: "var(--popover-foreground)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                    }}
+                    itemStyle={{ color: "var(--foreground)" }}
                     formatter={(value) => [
                       `${fmt(Number(value))} visits (${((Number(value) / total) * 100).toFixed(1)}%)`,
                       "Visits",

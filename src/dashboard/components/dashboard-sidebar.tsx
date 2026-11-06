@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { type Page } from "../../shared/dashboard-routes";
 import {
   Sidebar,
@@ -49,16 +50,18 @@ const titles: Record<Page, string> = {
 
 export function DashboardSidebar({
   page,
+  sitePicker,
   setPage,
   onLogout,
   onHome,
 }: {
   page: Page;
+  sitePicker: ReactNode;
   setPage: (page: Page) => void;
   onLogout: () => void;
   onHome: () => void;
 }) {
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, isMobile } = useSidebar();
   const navigate = (next: Page) => {
     setPage(next);
     setOpenMobile(false);
@@ -69,6 +72,7 @@ export function DashboardSidebar({
         <div className="sidebar-brand">
           <Brand />
         </div>
+        {isMobile && <div className="sidebar-site-picker">{sitePicker}</div>}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

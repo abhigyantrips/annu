@@ -21,8 +21,8 @@ export function SiteFavicon({
       {hostname && !failed ? (
         <img
           src={`https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostname)}.ico`}
-          width={16}
-          height={16}
+          width={24}
+          height={24}
           alt=""
           referrerPolicy="no-referrer"
           onError={() => setFailed(true)}
