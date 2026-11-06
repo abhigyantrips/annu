@@ -71,7 +71,7 @@ test("authenticated API: ingestion validation, geo trust, reports, export, and l
   const send = () =>
     app.inject({
       method: "POST",
-      url: "/api/collect",
+      url: "/api/send",
       headers: {
         "user-agent": browserUserAgent,
         origin: "https://blog.test",
@@ -92,7 +92,7 @@ test("authenticated API: ingestion validation, geo trust, reports, export, and l
     (
       await app.inject({
         method: "POST",
-        url: "/api/collect",
+        url: "/api/send",
         headers: { origin: "https://wrong.test", "user-agent": browserUserAgent },
         payload: event,
       })
@@ -100,7 +100,7 @@ test("authenticated API: ingestion validation, geo trust, reports, export, and l
     403,
   );
   assert.equal(
-    (await app.inject({ method: "POST", url: "/api/collect", payload: event }))
+    (await app.inject({ method: "POST", url: "/api/send", payload: event }))
       .statusCode,
     400,
   );
@@ -181,7 +181,7 @@ test("Cloudflare country, region and encoded city are used only when explicitly 
   ).json();
   const response = await app.inject({
     method: "POST",
-    url: "/api/collect",
+    url: "/api/send",
     headers: {
       origin: "https://blog.test",
       "user-agent": browserUserAgent,
@@ -253,7 +253,7 @@ for (const disableBotCheck of [false, true]) {
     const cookie = (login.headers["set-cookie"] as string).split(";")[0];
     const site = (await app.inject({ method: "POST", url: "/api/sites", headers: { cookie }, payload: { name: "Blog", domains: ["blog.test"] } })).json();
     const send = (payload: object, userAgent?: string) => app.inject({
-      method: "POST", url: "/api/collect",
+      method: "POST", url: "/api/send",
       headers: { origin: "https://blog.test", "content-type": "text/plain", "user-agent": userAgent ?? "" },
       payload: JSON.stringify(payload),
     });

@@ -132,7 +132,7 @@ export async function buildApp(options: AppOptions) {
     const path = request.routeOptions.url || request.url.split("?")[0];
     if (
       !path.startsWith("/api/") ||
-      ["/api/collect", "/api/login"].includes(path)
+      ["/api/send", "/api/login"].includes(path)
     )
       return;
     const session = request.cookies["annu.session"];
@@ -223,7 +223,7 @@ export async function buildApp(options: AppOptions) {
   app.post("/api/sites", async (request) =>
     writer.call("saveSite", siteSchema.parse(request.body)),
   );
-  app.post("/api/collect", async (request, reply) => {
+  app.post("/api/send", async (request, reply) => {
     // Simple text/plain requests avoid a CORS preflight and don't need a response body.
     const parsed = eventSchema.safeParse(request.body);
     const origin = request.headers.origin;

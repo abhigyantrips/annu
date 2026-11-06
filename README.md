@@ -86,7 +86,7 @@ For a conventional script installation (the script download itself can participa
 | `data-links`       | `false`                           | `true`: all outgoing HTTP(S), download and mailto links.                                      |
 | `data-link-query`  | `false`                           | Retain query parameters on opted-in links.                                                    |
 | `data-link-hash`   | `false`                           | Retain fragments on opted-in links.                                                           |
-| `data-endpoint`    | script directory + `/api/collect` | Override the collection URL, including same-origin proxy paths.                               |
+| `data-endpoint`    | script directory + `/api/send` | Override the collection URL, including same-origin proxy paths.                               |
 
 Individual links are opt-in even when automatic outgoing tracking is disabled:
 
@@ -116,7 +116,7 @@ If the initial pageview is lost, dependent packets are dropped server-side. If t
 
 ### Same-origin proxy, if desired
 
-You can proxy the script and collector through your blog's domain instead of a separate analytics hostname. For example, forward `/a/script.js` to `/script.js` and `/a/api/collect` to `/api/collect` on Annu. The tracker derives `/a/api/collect` automatically from `/a/script.js`; `data-endpoint` can override it. Preserve the browser's `Origin` and trusted Cloudflare location headers. Set your site's CSP to allow the chosen script and collection endpoint. Cache the script, **never** the collection endpoint or authenticated APIs.
+You can proxy the script and collector through your blog's domain instead of a separate analytics hostname. For example, forward `/a/script.js` to `/script.js` and `/a/api/send` to `/api/send` on Annu. The tracker derives `/a/api/send` automatically from `/a/script.js`; `data-endpoint` can override it. Preserve the browser's `Origin` and trusted Cloudflare location headers. Set your site's CSP to allow the chosen script and collection endpoint. Cache the script, **never** the collection endpoint or authenticated APIs.
 
 ## Metrics and privacy contract
 

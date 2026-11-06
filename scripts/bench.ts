@@ -62,7 +62,7 @@ try {
       while (next < count) {
         const index = next++;
         const at = performance.now();
-        const response = await fetch(`${url}/api/collect`, {
+        const response = await fetch(`${url}/api/send`, {
           method: "POST",
           headers: {
             origin: "https://benchmark.test",

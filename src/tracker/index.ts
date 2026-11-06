@@ -17,7 +17,7 @@ import { ReadingClock } from "./core";
     .filter(Boolean);
   if (domains.length && !domains.includes(location.host)) return;
   const endpoint = new URL(script.dataset.hostUrl || script.src, location.href);
-  endpoint.pathname = `${endpoint.pathname.replace(/\/[^/]*$/, "")}/api/collect`;
+  endpoint.pathname = `${endpoint.pathname.replace(/\/[^/]*$/, "")}/api/send`;
   endpoint.search = "";
   endpoint.hash = "";
   if (script.dataset.endpoint) {

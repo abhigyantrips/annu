@@ -28,7 +28,7 @@
       window.fixturePackets = [];
       const originalFetch = window.fetch.bind(window);
       window.fetch = (url, options) => {
-        if (String(url).includes("/api/collect"))
+        if (String(url).includes("/api/send"))
           window.fixturePackets.push(JSON.parse(options.body));
         return originalFetch(url, options);
       };
