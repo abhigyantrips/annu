@@ -5,13 +5,14 @@ import { Card } from "@/components/ui/card";
 import { useDashboard } from "@/features/dashboard/context";
 import { api } from "@/lib/api";
 import { dateRange } from "@/lib/date-range";
-import { countryName, dateTime, duration } from "@/lib/format";
+import { countryName, dateTime, duration, visitorName } from "@/lib/format";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Loader2, Users } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { CountryFlag } from "@/components/country-flag";
 import { useState } from "react";
 import type { Activity } from "../../../shared/types";
 import { VisitorHistory } from "./visitor-history";
+import { VisitorAvatar } from "@/components/visitor-avatar";
 export function Page() {
   const { site, filters, live } = useDashboard();
   const [visitor, setVisitor] = useState<string>();
@@ -51,11 +52,11 @@ export function Page() {
           Loading Visitors…
         </div>
       ) : (
-        <Card className="panel">
+        <Card className="panel visitor-table">
           <DataTable
             heading={<><h2>Visit History</h2>
               <span className="subtle">
-                Open a browser identity to see its retained activity across
+                Select a pseudonym to see its retained activity across
                 days.
               </span></>}
             icon={<Users size={19} />}
@@ -66,18 +67,26 @@ export function Page() {
             columns={[
               {
                 key: "visitorId",
-                name: "Browser Identity",
+                name: "Pseudonym",
                 render: (r) => (
                   <Button
                     variant="link"
-                    className="font-mono"
+                    className="h-auto gap-3 p-0"
+                    title={r.visitorId}
                     onClick={() => setVisitor(r.visitorId)}
                   >
-                    <span className="visitor-dot" />
-                    {r.visitorId.slice(0, 8)}
-                    <ArrowUpRight size={13} />
+                    <VisitorAvatar siteId={site.id} visitorId={r.visitorId} />
+                    {visitorName(r.visitorId)}
                   </Button>
                 ),
+              },
+              { key: "visits", name: "Visits", numeric: true },
+              { key: "views", name: "Views", numeric: true },
+              {
+                key: "duration",
+                name: "Reading Time",
+                numeric: true,
+                render: (r) => duration(r.duration),
               },
               {
                 key: "city",
@@ -95,14 +104,6 @@ export function Page() {
                 key: "lastSeen",
                 name: "Last Seen",
                 render: (r) => dateTime(r.lastSeen),
-              },
-              { key: "visits", name: "Visits", numeric: true },
-              { key: "views", name: "Views", numeric: true },
-              {
-                key: "duration",
-                name: "Reading Time",
-                numeric: true,
-                render: (r) => duration(r.duration),
               },
             ]}
           />

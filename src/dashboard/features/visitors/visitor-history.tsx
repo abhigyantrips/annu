@@ -1,15 +1,14 @@
 import type { Site, Timeline } from "../../../shared/types";
-import { CountryFlag } from "@/components/country-flag";
-import { Badge } from "@/components/ui/badge";
+import { VisitorAvatar } from "@/components/visitor-avatar";
+import { MetricHelp } from "@/components/metric-help";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ArrowUpRight, FileText, Loader2 } from "lucide-react";
+import { ArrowUpRight, FileText, LogIn, Loader2 } from "lucide-react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { Empty } from "@/components/empty";
 import { Modal } from "@/components/modal";
 import { api } from "@/lib/api";
-import { countryName, dateTime, duration, siteName } from "@/lib/format";
+import { duration, visitorName } from "@/lib/format";
 export function VisitorHistory({
   site,
   visitor,
@@ -40,15 +39,24 @@ export function VisitorHistory({
         clicks: pages.flatMap((p) => p.clicks),
       }
     : undefined;
+  const days = visitorTimeline(data);
   const busy = query.isFetching;
   const error = query.error?.message;
   return (
     <Modal title="Visitor Activity" onClose={onClose} wide>
-      <p className="visitor-id mono">{visitor}</p>
-      <p className="muted">
-        History across all retained dates · {data?.totalVisits ?? "…"} visits.
-        This ID identifies a browser, not a person.
-      </p>
+      <div className="mb-3 flex items-center gap-3">
+        <VisitorAvatar siteId={site.id} visitorId={visitor} size={64} />
+        <div className="min-w-0">
+          <div className="visitor-pseudonym flex items-center gap-1">
+            <p className="font-medium">{visitorName(visitor)}</p>
+            <MetricHelp
+              title="this browser ID"
+              note="This is a randomized ID that is stored on the browser for analytics. It hence identified a browser, not a person; clearing the site data removes and generates a new one. Pseudonym and avatar are also generated from it."
+            />
+          </div>
+          <p className="visitor-id mono">{visitor}</p>
+        </div>
+      </div>
       {error && (
         <p className="error" role="alert">
           {error}
@@ -63,73 +71,46 @@ export function VisitorHistory({
           Loading History…
         </p>
       )}
-      {data?.visits.map((v) => (
-        <Card className="visit-card" key={String(v.id)}>
-          <div className="visit-heading">
-            <strong>{dateTime(Number(v.started_at))}</strong>
-            <Badge variant="secondary">
-              {v.referrer ? siteName(String(v.referrer)) : "Direct / Unknown"}
-            </Badge>
-          </div>
-          <p className="subtle flex items-center gap-2">
-            <CountryFlag country={v.country ? String(v.country) : null} />
-            {[v.country && countryName(String(v.country)), v.region, v.city]
-              .filter(Boolean)
-              .join(" · ") || "Location Unknown"}
-            {v.campaign ? ` · Campaign: ${v.campaign}` : ""}
-          </p>
-          <div className="timeline">
-            {[
-              ...data.views
-                .filter((p) => p.visit_id === v.id)
-                .map((p) => ({
-                  id: p.id,
-                  at: Number(p.started_at),
-                  path: String(p.path),
-                  title: String(p.title),
-                  duration: Number(p.duration_ms),
-                  click: false,
-                })),
-              ...data.clicks
-                .filter((c) => c.visit_id === v.id)
-                .map((c) => ({
-                  id: c.id,
-                  at: Number(c.at),
-                  path: String(c.destination),
-                  title: `${c.kind} from ${c.path}`,
-                  duration: 0,
-                  click: true,
-                })),
-            ]
-              .sort((a, b) => a.at - b.at)
-              .map((item) => (
-                <div className="timeline-event" key={String(item.id)}>
-                  <span
-                    className={`event-icon ${item.click ? "outbound" : ""}`}
-                  >
-                    {item.click ? (
-                      <ArrowUpRight size={14} />
-                    ) : (
-                      <FileText size={14} />
+      <div className="visitor-timeline">
+        {days.map(({ date, events }) => (
+          <section className="visitor-day" key={date}>
+            <h3>{new Date(events[0].at).toLocaleDateString(undefined, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}</h3>
+            <ol>
+              {events.map((event) => {
+                const Icon = event.kind === "page" ? FileText : event.kind === "entry" ? LogIn : ArrowUpRight;
+                return (
+                  <li className="visitor-event" key={event.id}>
+                    <time dateTime={new Date(event.at).toISOString()}>
+                      {new Date(event.at).toLocaleTimeString(undefined, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: false,
+                      })}
+                    </time>
+                    <Icon size={16} aria-hidden="true" />
+                    <span className="visitor-event-label" title={event.title}>
+                      {event.kind === "entry" && <span className="muted">Came via </span>}
+                      {event.kind === "outgoing" && <span className="muted">Visited </span>}
+                      {event.label}
+                    </span>
+                    {event.kind === "page" && (
+                      <span className="visitor-reading-time" aria-label={`Reading time: ${duration(event.duration)}`}>
+                        {duration(event.duration)}
+                      </span>
                     )}
-                  </span>
-                  <div>
-                    <strong className="mono">{item.path}</strong>
-                    <small>{item.title}</small>
-                  </div>
-                  <span className="event-time">
-                    {new Date(item.at).toLocaleTimeString(undefined, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
-                    {!item.click && <small>{duration(item.duration)}</small>}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </Card>
-      ))}
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        ))}
+      </div>
       {data && !data.visits.length && <Empty text="The trail is quiet for now. This visitor’s next visit will appear here." />}
       {data?.nextBefore && (
         <Button disabled={busy} onClick={() => void query.fetchNextPage()}>
@@ -139,4 +120,54 @@ export function VisitorHistory({
       )}
     </Modal>
   );
+}
+
+type VisitorEvent = {
+  id: string;
+  at: number;
+  kind: "entry" | "page" | "outgoing";
+  label: string;
+  title?: string;
+  duration: number;
+};
+
+export function visitorTimeline(data?: Pick<Timeline, "visits" | "views" | "clicks">) {
+  if (!data) return [];
+  const events: VisitorEvent[] = [
+    ...data.visits.filter((visit) => visit.referrer).map((visit): VisitorEvent => ({
+      id: `entry:${visit.id}`,
+      at: Number(visit.started_at),
+      kind: "entry",
+      label: String(visit.referrer),
+      duration: 0,
+    })),
+    ...data.views.map((view): VisitorEvent => ({
+      id: `page:${view.id}`,
+      at: Number(view.started_at),
+      kind: "page",
+      label: String(view.path),
+      title: view.title ? String(view.title) : undefined,
+      duration: Number(view.duration_ms),
+    })),
+    ...data.clicks.map((click): VisitorEvent => ({
+      id: `outgoing:${click.id}`,
+      at: Number(click.at),
+      kind: "outgoing",
+      label: String(click.destination),
+      duration: 0,
+    })),
+  ];
+  // Entry first when a referral and its landing page share a timestamp.
+  const order = { entry: 0, page: 1, outgoing: 2 };
+  events.sort((a, b) => a.at - b.at || order[a.kind] - order[b.kind] || a.id.localeCompare(b.id));
+  const days = new Map<string, VisitorEvent[]>();
+  for (const event of events) {
+    const at = new Date(event.at);
+    const date = `${at.getFullYear()}-${at.getMonth()}-${at.getDate()}`;
+    const group = days.get(date);
+    if (group) group.push(event);
+    else days.set(date, [event]);
+  }
+  // Newest date first; events within each date read chronologically.
+  return [...days].reverse().map(([date, events]) => ({ date, events }));
 }

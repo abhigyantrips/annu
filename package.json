@@ -19,6 +19,8 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@dicebear/core": "10.7.0",
+    "@dicebear/styles": "10.6.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^10.1.10",
