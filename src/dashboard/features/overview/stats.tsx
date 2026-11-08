@@ -47,7 +47,7 @@ export function Stats({ report }: { report: Report }) {
           note: "Visits are activity windows separated by at least 30 minutes of inactivity.",
         },
         {
-          title: "Page Views",
+          title: "Pages Viewed",
           value: fmt(t.views),
           note: "Total page views in the selected period, including repeat views.",
         },

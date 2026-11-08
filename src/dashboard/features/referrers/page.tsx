@@ -10,16 +10,12 @@ export function Page() {
     <ReportPage>
       {({ report }) => (
         <Card className="panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Referrers</h2>
+          <DataTable
+            heading={<><h2>Referrers</h2>
               <span className="subtle">
                 Referring websites only.
-              </span>
-            </div>
-            <ArrowDownLeft size={19} />
-          </div>
-          <DataTable
+              </span></>}
+            icon={<ArrowDownLeft size={19} />}
             rows={report.referrers}
             columns={[
               {

@@ -24,11 +24,19 @@ export function DataTable({
   columns,
   search = true,
   emptyText,
+  heading,
+  icon,
+  actions,
+  beforeTable,
 }: {
   rows: any[];
   columns: Column[];
   search?: boolean;
   emptyText?: string;
+  heading?: React.ReactNode;
+  icon?: React.ReactNode;
+  actions?: React.ReactNode;
+  beforeTable?: React.ReactNode;
 }) {
   const [query, setQuery] = useState(""),
     [page, setPage] = useState(0),
@@ -54,10 +62,15 @@ export function DataTable({
     page,
     Math.max(0, Math.ceil(filtered.length / 20) - 1),
   );
-  return (
-    <>
-      {search && rows.length > 0 && (
+  const searchResults = search && rows.length > 0 && (
+    <span className="muted small-text table-search-results">
+      {fmt(filtered.length)} results
+      {rows.length >= 1000 ? " · top 1,000 shown" : ""}
+    </span>
+  );
+  const searchControl = search && rows.length > 0 && (
         <div className="table-toolbar">
+          {searchResults}
           <label className="search">
             <Search size={15} />
             <Input
@@ -67,15 +80,23 @@ export function DataTable({
                 setQuery(e.target.value);
                 setPage(0);
               }}
-              placeholder="Find Something…"
+              placeholder="Find something…"
             />
           </label>
-          <span className="muted small-text">
-            {fmt(filtered.length)} results
-            {rows.length >= 1000 ? " · top 1,000 shown" : ""}
-          </span>
         </div>
-      )}
+      );
+  return (
+    <>
+      {heading ? (
+        <div className="panel-heading table-card-heading">
+          <div className="table-card-title">
+            {icon && <span className="table-card-icon">{icon}</span>}
+            <div>{heading}</div>
+          </div>
+          {(actions || searchControl) && <div className="table-card-actions">{actions}{searchControl}</div>}
+        </div>
+      ) : searchControl}
+      {beforeTable}
       {!filtered.length ? (
         <Empty text={query ? "No results match your search." : emptyText} />
       ) : (
@@ -87,7 +108,7 @@ export function DataTable({
                   {columns.map((c) => (
                     <TableHead
                       key={c.key}
-                      className={c.numeric ? "numeric" : ""}
+                      className={c.numeric ? "sortable-head numeric" : "sortable-head"}
                       aria-sort={
                         sort?.key === c.key
                           ? sort.asc
@@ -100,9 +121,14 @@ export function DataTable({
                         variant="ghost"
                         className="table-sort"
                         onClick={() => {
-                          setSort({
-                            key: c.key,
-                            asc: sort?.key === c.key ? !sort.asc : !c.numeric,
+                          setSort((current) => {
+                            const initialAscending = !c.numeric;
+                            if (current?.key !== c.key) {
+                              return { key: c.key, asc: initialAscending };
+                            }
+                            return current.asc === initialAscending
+                              ? { key: c.key, asc: !initialAscending }
+                              : null;
                           });
                           setPage(0);
                         }}

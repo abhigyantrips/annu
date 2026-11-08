@@ -119,6 +119,7 @@ export function DashboardSidebar({
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
+              className="sign-out-button"
               tooltip="Sign Out"
               aria-label="Sign Out"
               onClick={onLogout}

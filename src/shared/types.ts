@@ -36,6 +36,7 @@ export type Report = {
     visits: number;
     duration: number;
   }[];
+  countries: { country: string; visitors: number; visits: number }[];
   locations: {
     country: string;
     region: string;
@@ -51,6 +52,15 @@ export type Report = {
     visitors: number;
   }[];
   utm: Record<Dimension, { name: string; raw: string[]; visits: number }[]>;
+  performanceOverview: {
+    group: "summary" | "time" | "device" | "browser" | "title";
+    name: string;
+    metric: string;
+    p50: number;
+    p75: number;
+    p95: number;
+    samples: number;
+  }[];
   performance: {
     path: string;
     metric: string;

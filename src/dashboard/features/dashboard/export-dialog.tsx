@@ -27,7 +27,7 @@ export function ExportDialog({
           value={exportKind}
           onValueChange={setExportKind}
           options={[
-            { value: "views", label: "Pageviews and Reading Times" },
+            { value: "views", label: "Pages Viewed and Reading Times" },
             { value: "visits", label: "Visits, Entry Sources, and Location" },
             { value: "clicks", label: "Outgoing Clicks" },
             { value: "vitals", label: "Performance Samples" },

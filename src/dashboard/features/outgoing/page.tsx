@@ -9,16 +9,12 @@ export function Page() {
     <ReportPage>
       {({ report }) => (
         <Card className="panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Outgoing Links</h2>
+          <DataTable
+            heading={<><h2>Outgoing Links</h2>
               <span className="subtle">
                 Only explicitly opted-in links are measured.
-              </span>
-            </div>
-            <ArrowUpRight size={19} />
-          </div>
-          <DataTable
+              </span></>}
+            icon={<ArrowUpRight size={19} />}
             rows={report.outbound}
             emptyText="Good links lead to new adventures. Enable outgoing-link tracking to follow them."
             columns={[

@@ -364,3 +364,48 @@ test("referrer lists omit direct and unknown sources while traffic totals retain
  assert.equal(report.totals.visits,4);
  assert.deepEqual(report.referrers.map(r=>r.name),["https://source.test"]);
 });
+
+test("performance overview ranks raw samples by time, title and environment without averaging path percentiles", (t) => {
+  const { db, site, visitorId, now, geo, view } = fixture(t);
+  for (const [index, value] of [100, 200, 300, 9000].entries()) {
+    const at = now + (index === 3 ? 3600000 : 0);
+    const { event } = view({ url: `https://blog.test/${index === 3 ? "slow" : "fast"}`, title: index === 3 ? "Slow page" : "Fast page" }, at);
+    db.ingest({ type: "vital", siteId: site.id, visitorId, viewId: event.viewId, metric: "LCP", value }, "https://blog.test", geo, at);
+  }
+  const report = db.report(site.id, now - 1, now + 3600001, now, "hour");
+  const summary = report.performanceOverview.find(row => row.group === "summary" && row.metric === "LCP")!;
+  assert.deepEqual(summary, { group: "summary", name: "", metric: "LCP", samples: 4, p50: 200, p75: 300, p95: 9000 });
+  const times = report.performanceOverview.filter(row => row.group === "time");
+  assert.equal(times.length, 2);
+  assert.deepEqual(times.map(row => row.samples), [3, 1]);
+  assert.deepEqual(times.map(row => row.p75), [300, 9000]);
+  assert.equal(report.performanceOverview.find(row => row.group === "title" && row.name === "Fast page")?.p75, 300);
+  assert.equal(report.performanceOverview.find(row => row.group === "device")?.samples, 4);
+  assert.equal(report.performanceOverview.find(row => row.group === "browser")?.p75, 300);
+  assert.equal(report.performanceOverview.some(row => row.metric === "INP"), false);
+  assert.deepEqual(db.report(site.id, now - 1000, now - 1, now).performanceOverview, []);
+  const other = db.saveSite({ name: "Other", domains: ["other.test"] });
+  assert.deepEqual(db.report(other.id, now - 1, now + 3600001, now).performanceOverview, []);
+  const daily = db.report(site.id, now - 1, now + 3600001, now, "day").performanceOverview.filter(row => row.group === "time");
+  assert.equal(daily.length, 1);
+  assert.equal(daily[0].p75, 300);
+});
+
+test("country map totals deduplicate visitors across cities and include every country", (t) => {
+  const { db, site, visitorId, now, view } = fixture(t);
+  view();
+  // The same visitor returns in another city in a new session.
+  db.ingest({ type: "view", siteId: site.id, visitorId, viewId: randomUUID(), url: "https://blog.test/second", title: "Second", referrer: "", utm: {} }, "https://blog.test", { country: "IN", region: "DL", city: "Delhi" }, now + 31 * 60000);
+  const countries = ["US", "GB", "FR", "DE", "JP", "AU", "BR", "CA", "ZA", "NZ", "Unknown"];
+  for (const country of countries) {
+    db.ingest({ type: "view", siteId: site.id, visitorId: randomUUID(), viewId: randomUUID(), url: "https://blog.test/", title: "Home", referrer: "", utm: {} }, "https://blog.test", { country: country === "Unknown" ? null : country, region: null, city: null }, now);
+  }
+  const report = db.report(site.id, now - 1, now + 32 * 60000, now);
+  assert.deepEqual(report.countries.find(row => row.country === "IN"), { country: "IN", visitors: 1, visits: 2 });
+  assert.equal(report.locations.filter(row => row.country === "IN").reduce((sum, row) => sum + row.visitors, 0), 2);
+  assert.equal(report.countries.length, 12);
+  assert.equal(report.countries.find(row => row.country === "Unknown")?.visitors, 1);
+  const other = db.saveSite({ name: "Other", domains: ["other.test"] });
+  assert.deepEqual(db.report(other.id, now - 1, now + 32 * 60000, now).countries, []);
+  assert.deepEqual(db.report(site.id, now - 1000, now - 1, now).countries, []);
+});

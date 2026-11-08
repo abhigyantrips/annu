@@ -51,17 +51,13 @@ export function Page() {
         </div>
       ) : (
         <Card className="panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Visit History</h2>
+          <DataTable
+            heading={<><h2>Visit History</h2>
               <span className="subtle">
                 Open a browser identity to see its retained activity across
                 days.
-              </span>
-            </div>
-            <Users size={19} />
-          </div>
-          <DataTable
+              </span></>}
+            icon={<Users size={19} />}
             rows={rows}
             columns={[
               {

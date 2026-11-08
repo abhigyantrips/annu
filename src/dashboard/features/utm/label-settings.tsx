@@ -8,19 +8,17 @@ import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queries";
 
 import { Modal } from "@/components/modal";
-import { SelectField } from "@/components/select-field";
 import { api } from "@/lib/api";
 export function LabelSettings({
   site,
-  initialDimension,
+  dimension,
   onClose,
 }: {
   site: Site;
-  initialDimension: Dimension;
+  dimension: Dimension;
   onClose: () => void;
 }) {
-  const [dimension, setDimension] = useState(initialDimension),
-    [name, setName] = useState(""),
+  const [name, setName] = useState(""),
     [values, setValues] = useState(""),
     [editing, setEditing] = useState<string>(),
     [error, setError] = useState(""),
@@ -38,10 +36,9 @@ export function LabelSettings({
     });
   };
   return (
-    <Modal title="UTM Labels" onClose={onClose}>
+    <Modal title={`${dimension[0].toUpperCase() + dimension.slice(1)} Labels`} onClose={onClose}>
       <p className="muted">
-        Combine several raw UTM values under one readable label. Each dimension
-        has its own labels.
+        Combine several raw UTM {dimension} values under one readable label.
       </p>
       <form
         onSubmit={async (e) => {
@@ -69,19 +66,6 @@ export function LabelSettings({
           }
         }}
       >
-        <div className="grid gap-2">
-          <span className="text-sm font-medium">Dimension</span>
-          <SelectField
-            label="Dimension"
-            value={dimension}
-            disabled={!!editing}
-            onValueChange={(value) => setDimension(value as Dimension)}
-            options={["source", "medium", "campaign"].map((value) => ({
-              value,
-              label: value[0].toUpperCase() + value.slice(1),
-            }))}
-          />
-        </div>
         <label>
           Display Label
           <Input

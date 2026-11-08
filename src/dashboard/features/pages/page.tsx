@@ -9,16 +9,12 @@ export function Page() {
     <ReportPage>
       {({ report }) => (
         <Card className="panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Page Breakdown</h2>
+          <DataTable
+            heading={<><h2>Page Breakdown</h2>
               <span className="subtle">
                 Reading time on a path ÷ distinct visits to that path.
-              </span>
-            </div>
-            <FileText size={18} />
-          </div>
-          <DataTable
+              </span></>}
+            icon={<FileText size={18} />}
             rows={report.paths}
             columns={[
               {

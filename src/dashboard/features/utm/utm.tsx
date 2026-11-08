@@ -1,18 +1,26 @@
 import type { Dimension, Report, Site } from "../../../shared/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
-import { Cell, Pie, PieChart, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { DataTable } from "@/components/data-table";
 import { Empty } from "@/components/empty";
 import { LabelSettings } from "@/features/utm/label-settings";
 import { colors, fmt } from "@/lib/format";
 export function Utm({ report, site }: { report: Report; site: Site }) {
-  const [dimension, setDimension] = useState<Dimension>("campaign"),
-    [configure, setConfigure] = useState(false);
+  return (
+    <div className="utm-sections">
+      {(["source", "medium", "campaign"] as const).map((dimension) => (
+        <UtmSection key={dimension} report={report} site={site} dimension={dimension} />
+      ))}
+    </div>
+  );
+}
+
+function UtmSection({ report, site, dimension }: { report: Report; site: Site; dimension: Dimension }) {
+  const [configure, setConfigure] = useState(false);
   const rows = report.utm[dimension],
     total = rows.reduce((n, r) => n + r.visits, 0);
   const slices = rows
@@ -28,21 +36,10 @@ export function Utm({ report, site }: { report: Report; site: Site }) {
     });
   return (
     <>
-      <Card className="panel">
+      <Card className="panel" render={<section aria-label={`${dimension[0].toUpperCase() + dimension.slice(1)} UTM tags`} />}>
         <div className="panel-heading">
-          <Tabs
-            value={dimension}
-            onValueChange={(value) => setDimension(value as Dimension)}
-          >
-            <TabsList>
-              {(["source", "medium", "campaign"] as const).map((d) => (
-                <TabsTrigger key={d} value={d}>
-                  {d[0].toUpperCase() + d.slice(1)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-          <Button onClick={() => setConfigure(true)}>
+          <h2>{dimension[0].toUpperCase() + dimension.slice(1)}</h2>
+          <Button aria-label={`Configure ${dimension} labels`} onClick={() => setConfigure(true)}>
             <SlidersHorizontal size={15} />
             Configure Labels
           </Button>
@@ -55,17 +52,18 @@ export function Utm({ report, site }: { report: Report; site: Site }) {
           <div className="utm-layout">
             <div className="donut-wrap">
               <div
-                style={{ position: "relative", width: 220, height: 220 }}
+                className="utm-donut"
                 role="img"
                 aria-label={`${dimension} distribution in visits`}
               >
-                <PieChart width={220} height={220} accessibilityLayer>
+                <ResponsiveContainer width="100%" height="100%">
+                <PieChart accessibilityLayer>
                   <Pie
                     data={slices}
                     dataKey="visits"
                     nameKey="name"
-                    innerRadius={72}
-                    outerRadius={100}
+                    innerRadius="68%"
+                    outerRadius="92%"
                     stroke="var(--card)"
                     isAnimationActive={false}
                   >
@@ -74,19 +72,21 @@ export function Utm({ report, site }: { report: Report; site: Site }) {
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{
-                      background: "var(--popover)",
-                      color: "var(--popover-foreground)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 8,
+                    wrapperStyle={{ zIndex: 10 }}
+                    content={({ active, payload }) => {
+                      const item = payload?.[0];
+                      if (!active || !item) return null;
+                      const visits = Number(item.value);
+                      return (
+                        <div className="utm-chart-tooltip">
+                          <strong>{item.name}</strong>
+                          <span>{fmt(visits)} visits ({((visits / total) * 100).toFixed(1)}%)</span>
+                        </div>
+                      );
                     }}
-                    itemStyle={{ color: "var(--foreground)" }}
-                    formatter={(value) => [
-                      `${fmt(Number(value))} visits (${((Number(value) / total) * 100).toFixed(1)}%)`,
-                      "Visits",
-                    ]}
                   />
                 </PieChart>
+                </ResponsiveContainer>
                 <div
                   style={{
                     position: "absolute",
@@ -102,7 +102,6 @@ export function Utm({ report, site }: { report: Report; site: Site }) {
                   <span className="subtle">tagged visits</span>
                 </div>
               </div>
-              <p className="subtle">Grouped by {dimension}</p>
             </div>
             <div>
               <DataTable
@@ -151,7 +150,7 @@ export function Utm({ report, site }: { report: Report; site: Site }) {
       {configure && (
         <LabelSettings
           site={site}
-          initialDimension={dimension}
+          dimension={dimension}
           onClose={() => setConfigure(false)}
         />
       )}

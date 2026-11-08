@@ -344,6 +344,12 @@ export class AnalyticsDatabase {
     const referrers = db.all<Report["referrers"][number]>(
       sql`WITH scoped AS (SELECT p.visitor_id,p.visit_id,p.duration_ms,v.referrer AS name FROM pageviews p JOIN visits v ON v.id=p.visit_id WHERE p.site_id=${siteId} AND p.started_at >= ${from} AND p.started_at < ${to} AND v.referrer IS NOT NULL AND v.referrer <> '') SELECT name,count(DISTINCT visitor_id) AS visitors,count(DISTINCT visit_id) AS visits,sum(duration_ms)*1.0/count(DISTINCT visit_id) AS duration FROM scoped GROUP BY name ORDER BY visits DESC LIMIT 1000`,
     );
+    const countries = db.all<Report["countries"][number]>(sql`
+      SELECT coalesce(nullif(v.country,''),'Unknown') AS country,
+        count(DISTINCT p.visitor_id) AS visitors,count(DISTINCT p.visit_id) AS visits
+      FROM pageviews p JOIN visits v ON v.id=p.visit_id
+      WHERE p.site_id=${siteId} AND p.started_at >= ${from} AND p.started_at < ${to}
+      GROUP BY country ORDER BY visitors DESC,country`);
     const locations = db.all<Report["locations"][number]>(
       sql`SELECT coalesce(v.country,'Unknown') AS country, coalesce(v.region,'Unknown') AS region, coalesce(v.city,'Unknown') AS city,count(DISTINCT p.visitor_id) AS visitors,count(DISTINCT p.visit_id) AS visits FROM pageviews p JOIN visits v ON v.id=p.visit_id WHERE p.site_id=${siteId} AND p.started_at >= ${from} AND p.started_at < ${to} GROUP BY country,region,city ORDER BY visitors DESC LIMIT 1000`,
     );
@@ -377,15 +383,41 @@ export class AnalyticsDatabase {
         max(CASE WHEN rn=cast((n*75+99)/100 AS integer) THEN value END) AS p75,
         max(CASE WHEN rn=cast((n*95+99)/100 AS integer) THEN value END) AS p95
       FROM ranked GROUP BY path,metric ORDER BY path,metric LIMIT 5000`);
+    // Rank observed measurements independently for each breakdown. Never average path percentiles.
+    const performanceOverview = db.all<Report["performanceOverview"][number]>(sql`
+      WITH scoped AS (
+        SELECT v.metric,v.value,p.title,
+          strftime(${dateFormat},p.started_at/1000,'unixepoch') AS date,
+          coalesce(nullif(s.device,''),'Unknown') AS device,
+          coalesce(nullif(s.browser,''),'Unknown') AS browser
+        FROM vitals v JOIN pageviews p ON p.id=v.view_id JOIN visits s ON s.id=p.visit_id
+        WHERE p.site_id=${siteId} AND p.started_at >= ${from} AND p.started_at < ${to}
+      ), expanded AS (
+        SELECT 'summary' AS kind,'' AS name,metric,value FROM scoped
+        UNION ALL SELECT 'time',date,metric,value FROM scoped
+        UNION ALL SELECT 'device',device,metric,value FROM scoped
+        UNION ALL SELECT 'browser',browser,metric,value FROM scoped
+        UNION ALL SELECT 'title',title,metric,value FROM scoped
+      ), ranked AS (
+        SELECT kind,name,metric,value,
+          row_number() OVER (PARTITION BY kind,name,metric ORDER BY value) AS rn,
+          count(*) OVER (PARTITION BY kind,name,metric) AS n FROM expanded
+      ) SELECT kind AS "group",name,metric,max(n) AS samples,
+        max(CASE WHEN rn=cast((n*50+99)/100 AS integer) THEN value END) AS p50,
+        max(CASE WHEN rn=cast((n*75+99)/100 AS integer) THEN value END) AS p75,
+        max(CASE WHEN rn=cast((n*95+99)/100 AS integer) THEN value END) AS p95
+      FROM ranked GROUP BY kind,name,metric ORDER BY kind,name,metric`);
     return {
       totals,
       series,
       paths,
       referrers,
       locations,
+      countries,
       outbound,
       utm,
       performance,
+      performanceOverview,
     };
   }
   audience(siteId: string, from: number, to: number, dimension: AudienceDimension): Audience {
