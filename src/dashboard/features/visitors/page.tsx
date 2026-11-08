@@ -1,3 +1,4 @@
+import { QueryStatusFooter } from "@/components/query-status-footer";
 import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,6 +60,9 @@ export function Page() {
               </span></>}
             icon={<Users size={19} />}
             rows={rows}
+            hasMore={query.hasNextPage}
+            loadingMore={query.isFetching}
+            onLoadMore={() => query.fetchNextPage()}
             columns={[
               {
                 key: "visitorId",
@@ -102,27 +106,15 @@ export function Page() {
               },
             ]}
           />
-          {query.hasNextPage && (
-            <div className="panel-note">
-              <Button
-                disabled={query.isFetching}
-                onClick={() => void query.fetchNextPage()}
-              >
-                Load Older Visitors
-              </Button>
-            </div>
-          )}
         </Card>
       )}
-      <footer className="status-footer">
-        <Button
-          variant="ghost"
-          disabled={query.isFetching}
-          onClick={() => void query.refetch()}
-        >
-          {query.isFetching ? "Refreshing…" : "Refresh Visitors"}
-        </Button>
-      </footer>
+      <QueryStatusFooter
+        isFetching={query.isFetching}
+        dataUpdatedAt={query.dataUpdatedAt}
+        live={live}
+        onRefresh={() => void query.refetch()}
+        refreshLabel="Refresh Visitors"
+      />
       {visitor && (
         <VisitorHistory
           key={`${site.id}:${visitor}`}

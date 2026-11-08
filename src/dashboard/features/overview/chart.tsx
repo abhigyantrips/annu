@@ -29,10 +29,10 @@ export function Chart({
     to,
     hourly ? "hour" : "day",
   );
-  const label = (at: number) =>
+  const label = (at: number, month: "short" | "long" = "short") =>
     new Date(at).toLocaleString(undefined, {
       timeZone: "UTC",
-      month: "short",
+      month,
       day: "numeric",
       ...(hourly ? { hour: "2-digit", minute: "2-digit" } : {}),
     });
@@ -82,7 +82,7 @@ export function Chart({
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis
               dataKey="at"
-              tickFormatter={label}
+              tickFormatter={(at) => label(at)}
               minTickGap={50}
               height={40}
               tickMargin={12}
@@ -115,7 +115,7 @@ export function Chart({
                       fontSize: "var(--text-sm)",
                     }}
                   >
-                    <p className="mb-2">{label(Number(at))} UTC</p>
+                    <p className="mb-2">{label(Number(at), "long")} UTC</p>
                     <dl className="grid grid-cols-2 gap-x-6 gap-y-1">
                       <dt style={{ color: "var(--chart-1)" }}>Visitors</dt>
                       <dd className="text-right font-medium">

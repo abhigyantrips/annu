@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ArrowUpRight } from "lucide-react";
 
@@ -24,7 +23,6 @@ export function Page() {
                 render: (r) => (
                   <div className="destination">
                     <span className="mono">{r.destination}</span>
-                    <Badge variant="secondary">{r.kind}</Badge>
                   </div>
                 ),
               },

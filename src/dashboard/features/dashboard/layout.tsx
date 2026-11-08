@@ -25,7 +25,7 @@ import {
   parseDashboardPath,
   type Page,
 } from "../../../shared/dashboard-routes";
-import { DashboardContext } from "./context";
+import { DashboardContext, type PerformancePercentile } from "./context";
 import { ExportDialog } from "./export-dialog";
 import { SitePicker } from "./site-picker";
 import { CurrentSitePicker } from "./current-site-picker";
@@ -48,6 +48,7 @@ export function DashboardLayout() {
   const filters = validateFilters(useSearch({ strict: false }));
   const sites = useQuery(sitesQuery);
   const site = sites.data?.find((s) => s.id === siteId);
+  const [percentile, setPercentile] = useState<PerformancePercentile>("p75");
   const [live, setLive] = useState(false),
     [adding, setAdding] = useState(false),
     [exporting, setExporting] = useState(false),
@@ -73,7 +74,7 @@ export function DashboardLayout() {
       />
     );
   return (
-    <DashboardContext.Provider value={{ site, filters, live, navigatePage }}>
+    <DashboardContext.Provider value={{ site, filters, live, navigatePage, percentile, setPercentile }}>
       <SidebarProvider
         style={
           {
@@ -126,6 +127,20 @@ export function DashboardLayout() {
                   </Button>
                 ) : (
                   <>
+                    {page === "performance" && (
+                      <div className="performance-percentile">
+                        <SelectField
+                          label="Performance Percentile"
+                          value={percentile}
+                          onValueChange={value => setPercentile(value as PerformancePercentile)}
+                          options={[
+                            { value: "p50", label: "P50 (50th Percentile)" },
+                            { value: "p75", label: "P75 (75th Percentile)" },
+                            { value: "p95", label: "P95 (95th Percentile)" },
+                          ]}
+                        />
+                      </div>
+                    )}
                     <div className="w-40">
                       <SelectField
                         label="Date Range"

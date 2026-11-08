@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { SelectField } from "@/components/select-field";
+import { MetricHelp } from "@/components/metric-help";
+import { useDashboard } from "@/features/dashboard/context";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/data-table";
 import { Empty } from "@/components/empty";
@@ -12,7 +12,13 @@ import type { Report } from "../../../shared/types";
 
 const metrics = ["LCP", "INP", "CLS", "FCP", "TTFB"] as const;
 type Metric = typeof metrics[number];
-type Percentile = "p50" | "p75" | "p95";
+const notes: Record<Metric, string> = {
+  LCP: "Largest Contentful Paint: how long the largest visible image or text block takes to appear. Lower is better.",
+  INP: "Interaction to Next Paint: how quickly the page visually responds to clicks, taps, and keyboard input. Lower is better.",
+  CLS: "Cumulative Layout Shift: how much visible content unexpectedly moves as the page is used. Lower is better; this is a score, not a duration.",
+  FCP: "First Contentful Paint: how long the first text, image, or other content takes to appear. Lower is better.",
+  TTFB: "Time to First Byte: how long the browser waits for the first byte of the document response. Lower is better.",
+};
 const names: Record<Metric, string> = { LCP: "Largest Contentful Paint", INP: "Interaction to Next Paint", CLS: "Cumulative Layout Shift", FCP: "First Contentful Paint", TTFB: "Time to First Byte" };
 // Web Vitals thresholds: https://developers.google.com/speed/docs/insights/v5/about
 const thresholds: Record<Metric, [number, number]> = { LCP: [2500, 4000], INP: [200, 500], CLS: [0.1, 0.25], FCP: [1800, 3000], TTFB: [800, 1800] };
@@ -29,7 +35,7 @@ export function Page() {
 }
 export function Performance({ report, from, to }: { report: Report; from: number; to: number }) {
   const [metric, setMetric] = useState<Metric>("LCP");
-  const [percentile, setPercentile] = useState<Percentile>("p75");
+  const { percentile } = useDashboard();
   const [pagesBy, setPagesBy] = useState("path");
   const [environment, setEnvironment] = useState("device");
   const overview = report.performanceOverview ?? [];
@@ -45,7 +51,7 @@ export function Performance({ report, from, to }: { report: Report; from: number
     const row = byTime.get(at);
     points.push({ at, p50: row?.p50 ?? null, p75: row?.p75 ?? null, p95: row?.p95 ?? null });
   }
-  const dateLabel = (at: number) => new Date(at).toLocaleString(undefined, { timeZone: "UTC", month: "short", day: "numeric", ...(hourly ? { hour: "2-digit", minute: "2-digit" } : {}) });
+  const dateLabel = (at: number, month: "short" | "long" = "short") => new Date(at).toLocaleString(undefined, { timeZone: "UTC", month, day: "numeric", ...(hourly ? { hour: "2-digit", minute: "2-digit" } : {}) });
   const pathRows = [...new Set(report.performance.map(row => row.path))].map(path => {
     const rows = report.performance.filter(row => row.path === path);
     return { name: path, ...Object.fromEntries(metrics.map(m => [m, rows.find(row => row.metric === m)?.[percentile]])), samples: rows.find(row => row.metric === metric)?.samples ?? 0 };
@@ -55,49 +61,57 @@ export function Performance({ report, from, to }: { report: Report; from: number
   const renderValue = (m: Metric, value?: number) => <span className="performance-value" data-rating={rating(m, value)}>{valueLabel(m, value)}</span>;
   return (
     <div className="performance-page">
-      <div className="performance-controls">
-        <span className="text-sm font-medium">Percentile</span>
-        <SelectField label="Performance Percentile" value={percentile} onValueChange={value => setPercentile(value as Percentile)} options={[{ value: "p50", label: "p50 — 50th Percentile" }, { value: "p75", label: "p75 — 75th Percentile" }, { value: "p95", label: "p95 — 95th Percentile" }]} />
-      </div>
       <div className="performance-metrics" aria-label="Performance metrics">
         {metrics.map(m => {
           const row = summary.find(row => row.metric === m);
           const status = rating(m, row?.[percentile]);
-          return <Button key={m} className="performance-metric" aria-pressed={metric === m} onClick={() => setMetric(m)} title={names[m]}>
-            <span>{m}</span><strong>{valueLabel(m, row?.[percentile])}</strong>
-            <span className="performance-value" data-rating={status}>{status}</span>
-          </Button>;
+          return (
+            <div key={m} className="performance-metric-card" data-active={metric === m}>
+              <div className="performance-metric-header">
+                <button type="button" data-slot="button" className="performance-metric" aria-pressed={metric === m} onClick={() => setMetric(m)}>
+                  {m}
+                </button>
+                <MetricHelp title={names[m]} note={notes[m]} />
+              </div>
+              <strong>{valueLabel(m, row?.[percentile])}</strong>
+              <span className="performance-value" data-rating={status}>{status}</span>
+            </div>
+          );
         })}
       </div>
       <Card className="panel chart-panel">
-        <div className="panel-heading"><div><h2>{names[metric]}</h2><span className="subtle">{hourly ? "Hourly" : "Daily"} performance · UTC</span></div><span className="subtle">Sample Size: {fmt(selected?.samples ?? 0)}</span></div>
+        <div className="panel-heading"><div><h2>{names[metric]}</h2><span className="subtle">{hourly ? "Hourly" : "Daily"} performance · UTC</span></div><div className="performance-chart-details">
+          <div className="performance-legend" aria-label="Chart legend">{["p50", "p75", "p95"].map((p, i) => <span key={p}><i style={{ background: `var(--chart-${i + 1})` }} />{p.toUpperCase()}</span>)}</div>
+          <span className="performance-chart-divider" aria-hidden="true" />
+          <span className="performance-sample-size">{fmt(selected?.samples ?? 0)} Data Points</span>
+        </div></div>
         {!timed.length ? <Empty text={`No ${metric} measurements in this period. Measurements appear as visitors use your site.`} /> : <>
           <div className="chart-frame" role="img" aria-label={`${names[metric]} over time, showing p50, p75 and p95. Missing measurements are gaps.`}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={points} margin={{ top: 12, right: 16, bottom: 0, left: 8 }} accessibilityLayer>
+              <LineChart data={points} margin={{ top: 8, right: 12, bottom: 0, left: 0 }} accessibilityLayer>
                 <CartesianGrid vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="at" tickFormatter={dateLabel} minTickGap={60} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis width={78} tickFormatter={value => valueLabel(metric, Number(value))} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} axisLine={false} tickLine={false} domain={[0, "auto"]} />
-                <Tooltip labelFormatter={value => dateLabel(Number(value))} formatter={(value, name) => [valueLabel(metric, Number(value)), String(name).toUpperCase()]} contentStyle={{ background: "var(--popover)", color: "var(--popover-foreground)", border: "1px solid var(--border)", borderRadius: 8 }} />
+                <XAxis dataKey="at" tickFormatter={at => dateLabel(at)} minTickGap={50} height={40} tickMargin={12} interval="preserveStartEnd" tick={{ fill: "var(--muted-foreground)", fontSize: "var(--text-sm)" }} axisLine={false} tickLine={false} />
+                <YAxis width="auto" tickMargin={8} tickFormatter={value => valueLabel(metric, Number(value))} tick={{ fill: "var(--muted-foreground)", fontSize: "var(--text-sm)" }} axisLine={false} tickLine={false} domain={[0, "auto"]} />
+                <Tooltip labelFormatter={value => dateLabel(Number(value), "long")} formatter={(value, name) => [valueLabel(metric, Number(value)), String(name).toUpperCase()]} contentStyle={{ background: "var(--popover)", color: "var(--popover-foreground)", border: "1px solid var(--border)", borderRadius: 8 }} />
                 {(["p50", "p75", "p95"] as const).map((p, i) => <Line key={p} type="linear" dataKey={p} stroke={`var(--chart-${i + 1})`} strokeWidth={p === percentile ? 3 : 1.5} strokeOpacity={p === percentile ? 1 : 0.5} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />)}
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <div className="performance-legend">{["p50", "p75", "p95"].map((p, i) => <span key={p}><i style={{ background: `var(--chart-${i + 1})` }} />{p}</span>)}</div>
         </>}
       </Card>
       <div className="performance-breakdowns">
         <Card className="panel">
-          <DataTable heading={<><h2>Pages</h2><span className="subtle">{percentile.toUpperCase()} · Slowest First</span></>} beforeTable={<Tabs value={pagesBy} onValueChange={setPagesBy}><TabsList><TabsTrigger value="path">Path</TabsTrigger><TabsTrigger value="title">Page Title</TabsTrigger></TabsList></Tabs>} key={pagesBy} rows={pageRows} emptyText="No page measurements in this period." columns={[
+          <DataTable heading={<><h2>Pages</h2><span className="subtle">{percentile.toUpperCase()} · Slowest First</span></>} beforeTable={<Tabs className="performance-table-tabs" value={pagesBy} onValueChange={setPagesBy}><TabsList><TabsTrigger value="path">Path</TabsTrigger><TabsTrigger value="title">Page Title</TabsTrigger></TabsList></Tabs>} key={pagesBy} rows={pageRows} emptyText="No page measurements in this period." columns={[
             { key: "name", name: pagesBy === "path" ? "Path" : "Page Title", render: row => <span className="performance-path" title={row.name}>{row.name}</span> },
             ...(pagesBy === "path" ? metrics : [metric]).map(m => ({ key: m, name: m, numeric: true, render: (row: any) => renderValue(m, row[m]) })),
             { key: "samples", name: `${metric} Samples`, numeric: true },
           ]} />
         </Card>
         <Card className="panel">
-          <div className="panel-heading"><h2>Environment</h2><span className="subtle">{percentile.toUpperCase()}</span></div>
-          <Tabs value={environment} onValueChange={setEnvironment}><TabsList><TabsTrigger value="device">Device</TabsTrigger><TabsTrigger value="browser">Browser</TabsTrigger></TabsList></Tabs>
-          <DataTable key={environment} rows={environmentRows} search={false} emptyText="No environment measurements in this period." columns={[
+          <DataTable
+            heading={<><h2>Environment</h2><span className="subtle">{percentile.toUpperCase()}</span></>}
+            beforeTable={<Tabs className="performance-table-tabs" value={environment} onValueChange={setEnvironment}><TabsList><TabsTrigger value="device">Device</TabsTrigger><TabsTrigger value="browser">Browser</TabsTrigger></TabsList></Tabs>}
+            key={environment} rows={environmentRows} search={false} emptyText="No environment measurements in this period." columns={[
             { key: "name", name: environment === "device" ? "Device" : "Browser" },
             { key: "value", name: metric, numeric: true, render: row => renderValue(metric, row.value) },
             { key: "samples", name: "Samples", numeric: true },

@@ -1,8 +1,9 @@
+import { QueryStatusFooter } from "@/components/query-status-footer";
 import { Button } from "@/components/ui/button";
 import { useDashboard } from "@/features/dashboard/context";
 import { reportQuery } from "@/lib/queries";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Report } from "../../../shared/types";
 export function ReportPage({
@@ -41,27 +42,12 @@ export function ReportPage({
           Gathering a little perspective…
         </div>
       ) : null}
-      <footer className="status-footer">
-        <div className="status-pill rounded-lg">
-          <span className="status-pill-label">
-            {query.isFetching
-              ? "Refreshing…"
-              : query.dataUpdatedAt
-                ? `Updated ${new Date(query.dataUpdatedAt).toLocaleTimeString()}`
-                : "Waiting for Data"}
-            {live ? " · Live" : ""}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Refresh Analytics"
-            disabled={query.isFetching}
-            onClick={refresh}
-          >
-            <RefreshCw size={12} />
-          </Button>
-        </div>
-      </footer>
+      <QueryStatusFooter
+        isFetching={query.isFetching}
+        dataUpdatedAt={query.dataUpdatedAt}
+        live={live}
+        onRefresh={refresh}
+      />
     </>
   );
 }

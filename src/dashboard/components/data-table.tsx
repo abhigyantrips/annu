@@ -28,6 +28,9 @@ export function DataTable({
   icon,
   actions,
   beforeTable,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: {
   rows: any[];
   columns: Column[];
@@ -37,6 +40,9 @@ export function DataTable({
   icon?: React.ReactNode;
   actions?: React.ReactNode;
   beforeTable?: React.ReactNode;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => Promise<unknown>;
 }) {
   const [query, setQuery] = useState(""),
     [page, setPage] = useState(0),
@@ -64,7 +70,7 @@ export function DataTable({
   );
   const searchResults = search && rows.length > 0 && (
     <span className="muted small-text table-search-results">
-      {fmt(filtered.length)} results
+      {fmt(filtered.length)}{hasMore ? "+" : ""} results
       {rows.length >= 1000 ? " · top 1,000 shown" : ""}
     </span>
   );
@@ -166,16 +172,16 @@ export function DataTable({
               </TableBody>
             </Table>
           </div>
-          {filtered.length > 20 && (
+          {(filtered.length > 20 || hasMore) && (
             <div className="pagination">
               <span>
                 Showing {currentPage * 20 + 1}–
                 {Math.min(currentPage * 20 + 20, filtered.length)} of{" "}
-                {fmt(filtered.length)}
+                {fmt(filtered.length)}{hasMore ? "+" : ""} results
               </span>
               <div>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon-sm"
                   aria-label="Previous Page"
                   disabled={!currentPage}
@@ -184,11 +190,17 @@ export function DataTable({
                   <ChevronLeft size={17} />
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon-sm"
                   aria-label="Next Page"
-                  disabled={(currentPage + 1) * 20 >= filtered.length}
-                  onClick={() => setPage(currentPage + 1)}
+                  disabled={loadingMore || ((currentPage + 1) * 20 >= filtered.length && !hasMore)}
+                  aria-busy={loadingMore}
+                  onClick={async () => {
+                    if ((currentPage + 1) * 20 >= filtered.length && hasMore) {
+                      await onLoadMore?.();
+                    }
+                    setPage(currentPage + 1);
+                  }}
                 >
                   <ChevronRight size={17} />
                 </Button>

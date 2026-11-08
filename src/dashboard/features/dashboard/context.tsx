@@ -2,7 +2,10 @@ import type { Filters } from "@/lib/date-range";
 import { createContext, useContext } from "react";
 import type { Page } from "../../../shared/dashboard-routes";
 import type { Site } from "../../../shared/types";
+export type PerformancePercentile = "p50" | "p75" | "p95";
 export type DashboardContext = {
+  percentile: PerformancePercentile;
+  setPercentile: (value: PerformancePercentile) => void;
   site: Site;
   filters: Filters;
   live: boolean;
